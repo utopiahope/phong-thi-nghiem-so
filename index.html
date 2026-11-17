@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phòng Thí Nghiệm Số - Chương Dao Động (Vật Lý 11)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- MathJax -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-slate-100 min-h-screen flex flex-col p-4 md:p-6 justify-center items-center">
+
+    <!-- ================= GIAO DIỆN CHÍNH ================= -->
+    <div id="mainApp" class="flex-1 flex flex-col max-w-7xl mx-auto w-full space-y-6">
+        
+        <!-- Thanh Header & Điều hướng -->
+        <header class="glass-panel p-4 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 border border-cyan-500/30 shadow-2xl">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-gradient-to-br from-cyan-400 via-indigo-500 to-pink-500 text-slate-950 rounded-xl shadow-lg font-black text-lg animate-pulse">🧪</div>
+                <div>
+                    <h2 class="text-lg font-extrabold bg-gradient-to-r from-cyan-400 to-teal-300 bg-clip-text text-transparent">PHÒNG THÍ NGHIỆM SỐ</h2>
+                    <p class="text-xs text-slate-400 font-medium">Học Vật Lý 11 Trực Tuyến Sinh Động & Thông Minh</p>
+                </div>
+            </div>
+
+            <!-- Menu chính dành riêng cho Học sinh -->
+            <nav id="protectedNavStudent" class="flex flex-wrap items-center gap-2 hidden">
+                <button onclick="switchMainTab('home')" id="nav-home" class="px-4 py-2 rounded-xl font-bold text-xs nav-active transition">🏠 Trang chủ</button>
+                <button onclick="switchMainTab('roadmap')" id="nav-roadmap" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">🗺️ Lộ trình</button>
+                <button onclick="switchMainTab('lab')" id="nav-lab" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">🧪 Thí nghiệm ảo & Lý thuyết</button>
+                <button onclick="switchMainTab('practice')" id="nav-practice" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">📝 Bài tập</button>
+            </nav>
+
+            <!-- Menu chính dành riêng cho Giáo viên -->
+            <nav id="protectedNavTeacher" class="flex flex-wrap items-center gap-2 hidden">
+                <button onclick="switchMainTab('home')" id="nav-home-t" class="px-4 py-2 rounded-xl font-bold text-xs nav-active transition">🏠 Trang chủ</button>
+                <button onclick="switchMainTab('roadmap')" id="nav-roadmap-t" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">🗺️ Lộ trình</button>
+                <button onclick="switchMainTab('lab')" id="nav-lab-t" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">🧪 Thí nghiệm ảo & Lý thuyết</button>
+                <button onclick="switchMainTab('practice')" id="nav-practice-t" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">📝 Bài tập</button>
+                <button onclick="switchMainTab('teacher')" id="nav-teacher" class="px-4 py-2 rounded-xl font-bold text-xs bg-amber-600 text-white hover:bg-amber-500 transition">👨‍🏫 Quản lý GV</button>
+            </nav>
+
+            <div class="flex items-center gap-2">
+                <span id="userStatusBadge" class="text-xs font-bold text-cyan-300 bg-cyan-950 px-3 py-1.5 rounded-lg border border-cyan-800">Chưa đăng nhập</span>
+                <div id="authButtonsGroup" class="flex gap-2">
+                    <button onclick="openAuthModal('login')" class="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold text-xs transition shadow">🔑 Đăng nhập</button>
+                    <button onclick="openAuthModal('register')" class="px-3.5 py-1.5 bg-pink-600 hover:bg-pink-500 text-white rounded-lg font-bold text-xs transition shadow">📝 Đăng ký</button>
+                </div>
+                <button id="logoutBtn" onclick="handleLogout()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold text-xs transition hidden">Đăng xuất</button>
+            </div>
+        </header>
+
+        <!-- ================= NỘI DUNG CÁC TAB ================= -->
+        <main class="flex-1">
+            
+            <!-- 1. TRANG CHỦ -->
+            <div id="tab-home" class="space-y-6">
+                <div class="hero-gradient p-8 md:p-12 rounded-3xl border border-cyan-400/40 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
+                    <div class="space-y-4 max-w-2xl z-10">
+                        <span class="px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-pink-500 text-slate-950 font-extrabold rounded-full text-xs shadow-lg uppercase tracking-wider">🚀 Phòng Thí Nghiệm Số Thế Hệ Mới</span>
+                        <h2 class="text-3xl md:text-5xl font-black bg-gradient-to-r from-cyan-300 via-pink-300 to-amber-300 bg-clip-text text-transparent leading-tight">Khám Phá Thế Giới Dao Động Sống Động Như Thật!</h2>
+                        <p class="text-slate-200 text-sm md:text-base leading-relaxed font-medium">Chào mừng bạn đến với <b>Phòng Thí Nghiệm Số</b> – không gian học tập số hóa đỉnh cao dành riêng cho học sinh lớp 11. Vui lòng <b>Đăng nhập</b> hoặc <b>Đăng ký</b> tài khoản ở góc trên để mở khóa Lộ trình, Thí nghiệm ảo chỉnh thông số mượt mà và hệ thống Bài tập!</p>
+                        
+                        <div class="pt-3 flex flex-wrap gap-4">
+                            <button onclick="openAuthModal('login')" class="px-7 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold rounded-2xl shadow-xl transition text-sm">🔑 Đăng nhập ngay để bắt đầu</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-3xl border border-pink-500/30 text-center space-y-4 min-w-[280px] z-10 shadow-2xl">
+                        <div class="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-tr from-pink-500 to-cyan-400 flex items-center justify-center text-slate-950 text-3xl font-black shadow-lg">🌟</div>
+                        <div>
+                            <h4 class="font-extrabold text-white text-base">Học Tập Toàn Diện</h4>
+                            <p class="text-xs text-slate-300 mt-1">Lộ trình SGK + Thí nghiệm tương tác thời gian thực + Kho đề chuẩn</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel p-7 rounded-3xl border border-cyan-500/30 space-y-4 shadow-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="p-3 bg-cyan-500/20 text-cyan-400 rounded-2xl text-xl">💡</div>
+                            <h3 class="text-xl font-extrabold text-cyan-300">Giới thiệu về Website</h3>
+                        </div>
+                        <p class="text-xs md:text-sm text-slate-300 leading-relaxed font-medium">
+                            <b>Phòng Thí Nghiệm Số</b> là môi trường giả lập thí nghiệm vật lý trực tuyến chuyên nghiệp. Website giúp học sinh học tập chương <i>Dao động (Vật lý 11)</i> bằng cách thay đổi trực tiếp các thông số ($A, \omega, \varphi$) và quan sát ngay lập tức đồ thị dao động theo thời gian thực.
+                        </p>
+                    </div>
+
+                    <div class="glass-panel p-7 rounded-3xl border border-pink-500/30 space-y-4 shadow-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="p-3 bg-pink-500/20 text-pink-400 rounded-2xl text-xl">🎯</div>
+                            <h3 class="text-xl font-extrabold text-pink-300">Mục Đích Của Web</h3>
+                        </div>
+                        <ul class="text-xs md:text-sm text-slate-300 leading-relaxed space-y-2 list-disc list-inside font-medium">
+                            <li><b>Lộ trình chuẩn SGK:</b> Bám sát 4 chặng cốt lõi của chương Dao động.</li>
+                            <li><b>Thí nghiệm ảo mượt mà:</b> Thay đổi thông số trực tiếp, trực quan hóa chuyển động.</li>
+                            <li><b>Hệ thống Bài tập:</b> Làm bài tập GV giao và kho 20 đề tự luyện không trùng lặp.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. LỘ TRÌNH HỌC TẬP -->
+            <div id="tab-roadmap" class="space-y-6 hidden">
+                <div class="glass-panel p-6 rounded-2xl space-y-4 border border-cyan-500/30">
+                    <h2 class="text-xl font-extrabold text-cyan-300 flex items-center gap-2">🗺️ Lộ trình học tập chuẩn SGK Vật Lý 11 (Chương Dao Động)</h2>
+                    <p class="text-xs text-slate-300">Hoàn thành lần lượt các chặng theo đúng cấu trúc sách giáo khoa mới:</p>
+                </div>
+                <div class="space-y-4">
+                    <div onclick="switchMainTab('lab'); switchLabExp('spring')" class="glass-panel p-5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-cyan-400 transition">
+                        <div>
+                            <span class="text-xs font-bold text-amber-400">Chặng 1</span>
+                            <h4 class="font-extrabold text-white text-base">Bài 1: Mô tả dao động</h4>
+                            <p class="text-xs text-slate-400 mt-1">Khái niệm dao động cơ, li độ, biên độ, chu kỳ và tần số.</p>
+                        </div>
+                        <span class="px-3 py-1 bg-cyan-950 text-cyan-400 rounded-lg text-xs font-semibold border border-cyan-700">Vào học ngay 🧪</span>
+                    </div>
+
+                    <div onclick="switchMainTab('lab'); switchLabExp('spring')" class="glass-panel p-5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-cyan-400 transition">
+                        <div>
+                            <span class="text-xs font-bold text-amber-400">Chặng 2</span>
+                            <h4 class="font-extrabold text-white text-base">Bài 2: Phương trình dao động điều hòa & Đồ thị</h4>
+                            <p class="text-xs text-slate-400 mt-1">Khảo sát phương trình $x = A\cos(\omega t + \varphi)$, vận tốc $v$, gia tốc $a$ và đồ thị hình sin.</p>
+                        </div>
+                        <span class="px-3 py-1 bg-cyan-950 text-cyan-400 rounded-lg text-xs font-semibold border border-cyan-700">Vào học ngay 🧪</span>
+                    </div>
+
+                    <div onclick="switchMainTab('lab'); switchLabExp('pendulum')" class="glass-panel p-5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-cyan-400 transition">
+                        <div>
+                            <span class="text-xs font-bold text-amber-400">Chặng 3</span>
+                            <h4 class="font-extrabold text-white text-base">Bài 3 & 4: Năng lượng trong dao động điều hòa (Con lắc lò xo & Con lắc đơn)</h4>
+                            <p class="text-xs text-slate-400 mt-1">Động năng, thế năng, cơ năng và khảo sát thí nghiệm con lắc lò xo, con lắc đơn.</p>
+                        </div>
+                        <span class="px-3 py-1 bg-cyan-950 text-cyan-400 rounded-lg text-xs font-semibold border border-cyan-700">Vào học ngay 🧪</span>
+                    </div>
+
+                    <div onclick="switchMainTab('lab'); switchLabExp('damped')" class="glass-panel p-5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-cyan-400 transition">
+                        <div>
+                            <span class="text-xs font-bold text-amber-400">Chặng 4</span>
+                            <h4 class="font-extrabold text-white text-base">Bài 5: Dao động tắt dần, dao động cưỡng bức & Hiện tượng cộng hưởng</h4>
+                            <p class="text-xs text-slate-400 mt-1">Ảnh hưởng của lực cản môi trường, ngoại lực cưỡng bức và điều kiện đạt cộng hưởng.</p>
+                        </div>
+                        <span class="px-3 py-1 bg-cyan-950 text-cyan-400 rounded-lg text-xs font-semibold border border-cyan-700">Vào học ngay 🧪</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. THÍ NGHIỆM ẢO & LÝ THUYẾT -->
+            <div id="tab-lab" class="space-y-6 hidden">
+                <div class="flex flex-wrap gap-2 glass-panel p-3 rounded-2xl">
+                    <button onclick="switchLabExp('spring')" id="lab-btn-spring" class="px-4 py-2 rounded-xl font-bold text-xs bg-cyan-600 text-white shadow transition">1. Con lắc lò xo</button>
+                    <button onclick="switchLabExp('pendulum')" id="lab-btn-pendulum" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">2. Con lắc đơn</button>
+                    <button onclick="switchLabExp('damped')" id="lab-btn-damped" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">3. Dao động tắt dần</button>
+                    <button onclick="switchLabExp('forced')" id="lab-btn-forced" class="px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">4. Cưỡng bức & Cộng hưởng</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="glass-panel p-5 rounded-2xl space-y-3">
+                            <div class="flex justify-between items-center">
+                                <h3 id="labSimTitle" class="text-base font-extrabold text-cyan-300">🧪 Thí nghiệm: Con lắc lò xo</h3>
+                                <div class="flex items-center gap-3">
+                                    <button onclick="resetSimulation()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded-xl font-bold text-xs transition border border-cyan-500/30">🔄 Đặt lại</button>
+                                    <button onclick="togglePause()" id="pauseBtn" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-xs shadow transition">⏸ Tạm dừng</button>
+                                </div>
+                            </div>
+                            <canvas id="simCanvas" width="700" height="260" class="w-full bg-slate-950 rounded-xl border border-cyan-500/30 shadow-inner"></canvas>
+                        </div>
+
+                        <!-- Thanh điều chỉnh thông số -->
+                        <div class="glass-panel p-6 rounded-2xl grid grid-cols-1 md:grid-cols-4 gap-4" id="labControls">
+                            <div>
+                                <label class="block text-xs font-bold mb-1 text-slate-300">Biên độ $A$: <span id="valA" class="text-cyan-400 font-bold">50</span> cm</label>
+                                <input type="range" id="rangeA" min="20" max="90" value="50" class="w-full accent-cyan-400 cursor-pointer" oninput="updateLabParams()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1 text-slate-300">Tần số góc $\omega$: <span id="valW" class="text-cyan-400 font-bold">5.0</span> rad/s</label>
+                                <input type="range" id="rangeW" min="1" max="12" value="5" step="0.5" class="w-full accent-cyan-400 cursor-pointer" oninput="updateLabParams()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1 text-slate-300">Pha ban đầu $\varphi$: <span id="valPhi" class="text-cyan-400 font-bold">0.0</span> rad</label>
+                                <input type="range" id="rangePhi" min="0" max="3.14" value="0" step="0.1" class="w-full accent-cyan-400 cursor-pointer" oninput="updateLabParams()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1 text-amber-300">⚡ Tốc độ: <span id="valSpeed" class="text-amber-400 font-bold">1.0x</span></label>
+                                <input type="range" id="rangeSpeed" min="0.2" max="3.0" value="1.0" step="0.2" class="w-full accent-amber-400 cursor-pointer" oninput="updateLabParams()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl space-y-3">
+                        <h3 class="text-sm font-extrabold text-cyan-300">📊 Đồ thị thời gian thực</h3>
+                        <div class="relative h-[355px]">
+                            <canvas id="graphCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl space-y-4 border border-cyan-500/30">
+                    <h3 id="labTheoryTitle" class="text-lg font-extrabold text-cyan-300 flex items-center gap-2">📖 Nội dung lý thuyết & Công thức trọng tâm</h3>
+                    <div id="labTheoryBody" class="space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed"></div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl space-y-4 border border-emerald-500/30">
+                    <h3 class="text-base font-extrabold text-emerald-400 flex items-center gap-2">📚 Bộ 15 câu hỏi luyện tập chuyên đề tại chỗ</h3>
+                    <div id="labExerciseContainer" class="space-y-4 max-h-[700px] overflow-y-auto pr-2 custom-scroll"></div>
+                </div>
+            </div>
+
+            <!-- 4. BÀI TẬP -->
+            <div id="tab-practice" class="space-y-6 hidden">
+                <div class="glass-panel p-4 rounded-2xl flex flex-wrap gap-2">
+                    <button onclick="switchPracticeSub('teacher')" id="subBtnTeacher" class="px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 text-white shadow transition">📚 Bài tập giáo viên giao</button>
+                    <button onclick="switchPracticeSub('self')" id="subBtnSelf" class="px-5 py-2.5 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition">🤖 Kho 20 đề tự luyện tập</button>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-center border-b border-slate-700 pb-4 gap-3">
+                        <h3 id="practiceHeading" class="text-lg font-extrabold text-cyan-300">📋 Bài tập giáo viên giao</h3>
+                        <button id="submitPracticeBtn" onclick="submitPractice()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow transition hidden">🚀 Nộp bài & Chấm điểm</button>
+                    </div>
+
+                    <div id="practiceResultBox" class="hidden p-4 bg-cyan-950 rounded-2xl border border-cyan-500/40 text-center space-y-1 shadow-inner">
+                        <h4 class="text-xl font-extrabold text-cyan-300">🎉 KẾT QUẢ BÀI LÀM</h4>
+                        <p id="practiceScoreText" class="text-lg font-extrabold text-emerald-400"></p>
+                    </div>
+
+                    <div id="practiceContent" class="space-y-6 text-sm text-slate-300 max-h-[750px] overflow-y-auto pr-2 custom-scroll"></div>
+                </div>
+            </div>
+
+            <!-- 5. QUẢN LÝ GIÁO VIÊN -->
+            <div id="tab-teacher" class="space-y-6 hidden">
+                <div class="glass-panel p-6 rounded-2xl space-y-4 border border-amber-500/30">
+                    <h2 class="text-xl font-extrabold text-amber-400 flex items-center gap-2">👨‍🏫 Bảng Điều Hành & Quản Lý Học Liệu Của Giáo Viên</h2>
+                    <p class="text-xs text-slate-300">Tạo lớp học mới, đăng tải đề kiểm tra và bấm vào mã lớp để kiểm tra bảng tiến độ chi tiết của học sinh.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Cột 1: Tạo lớp học -->
+                    <div class="glass-panel p-6 rounded-2xl space-y-4">
+                        <h3 class="text-sm font-bold text-cyan-300">🏫 Tạo Lớp Học Mới</h3>
+                        <div class="space-y-3">
+                            <input type="text" id="newClassNameInput" placeholder="VD: 11C3, 11A2..." class="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-amber-400">
+                            <button onclick="createNewClass()" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow transition text-xs">➕ Thêm Lớp Mới</button>
+                        </div>
+                        <div class="pt-2">
+                            <p class="text-xs font-semibold text-slate-400 mb-2">Danh sách các lớp hiện tại (Bấm để xem tiến độ):</p>
+                            <div id="classListContainer" class="flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Cột 2: Đăng tải đề -->
+                    <div class="glass-panel p-6 rounded-2xl space-y-4">
+                        <h3 class="text-sm font-bold text-cyan-300">📤 Tải đề & Giao cho học sinh</h3>
+                        <div class="space-y-3">
+                            <input type="text" id="teacherExamTitle" placeholder="VD: Đề kiểm tra 1 tiết" class="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-amber-400">
+                            <input type="file" class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white hover:file:bg-amber-500 transition cursor-pointer">
+                            <button onclick="teacherUploadExam()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow transition text-xs">📤 Tải lên & Giao đề</button>
+                        </div>
+                        <div id="teacherUploadMsg" class="hidden p-3 bg-emerald-950 rounded-xl border border-emerald-600 text-emerald-300 text-xs font-semibold"></div>
+                    </div>
+
+                    <!-- Cột 3: Bảng tiến độ theo lớp & đề -->
+                    <div class="glass-panel p-6 rounded-2xl space-y-4 md:col-span-1">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-cyan-300">📈 Tiến độ: <span id="activeClassLabel" class="text-amber-400">Tất cả lớp</span></h3>
+                            <button onclick="resetClassFilter()" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded hover:bg-slate-700">Xem tất cả</button>
+                        </div>
+                        <div id="classExamSelectorBox" class="space-y-2">
+                            <p class="text-xs text-slate-400 italic">💡 Vui lòng bấm vào mã lớp bên cột trái để xem danh sách đề và bảng tiến độ.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bảng chi tiết tiến độ học sinh -->
+                <div class="glass-panel p-6 rounded-2xl space-y-4">
+                    <h3 id="progressTableTitle" class="text-sm font-bold text-amber-300">📋 Bảng chi tiết tiến độ làm bài</h3>
+                    <div class="overflow-x-auto rounded-xl border border-slate-700">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-950 text-cyan-400">
+                                    <th class="p-3 border-b border-slate-700">Họ và tên học sinh</th>
+                                    <th class="p-3 border-b border-slate-700">Mã lớp</th>
+                                    <th class="p-3 border-b border-slate-700">Tên bài kiểm tra / Đề</th>
+                                    <th class="p-3 border-b border-slate-700">Số điểm</th>
+                                    <th class="p-3 border-b border-slate-700">Thời gian làm bài</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teacherProgressTableBody">
+                                <!-- Dữ liệu mẫu động -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ================= MODAL ĐĂNG NHẬP / ĐĂNG KÝ ================= -->
+    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md hidden p-4">
+        <div class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-2xl space-y-6 border border-cyan-500/30 relative">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold">✕</button>
+            <h3 id="authModalTitle" class="text-2xl font-extrabold text-cyan-300 text-center">Đăng nhập tài khoản</h3>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="setAuthRole('student')" id="authRoleStudent" class="p-3 rounded-xl font-bold bg-cyan-600 text-white text-xs border border-cyan-400 shadow">🎓 Học sinh</button>
+                <button onclick="setAuthRole('teacher')" id="authRoleTeacher" class="p-3 rounded-xl font-bold bg-slate-800 text-slate-300 text-xs border border-transparent hover:bg-slate-700">👨‍🏫 Giáo viên</button>
+            </div>
+
+            <div class="space-y-4 text-left">
+                <div id="registerNameBox" class="hidden space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold mb-1 text-cyan-300 uppercase">Họ và tên:</label>
+                        <input type="text" id="authFullNameInput" placeholder="Nhập họ và tên..." class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div id="classCodeFieldContainer">
+                        <label class="block text-xs font-bold mb-1 text-cyan-300 uppercase">Mã lớp:</label>
+                        <input type="text" id="authClassCodeInput" placeholder="Ví dụ: 11C1..." class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-400">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1 text-cyan-300 uppercase">Tên đăng nhập / Email:</label>
+                    <input type="text" id="authUserInput" value="hocsinh01" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1 text-cyan-300 uppercase">Mật khẩu:</label>
+                    <input type="password" id="authPassInput" value="123456" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-400">
+                </div>
+                <button onclick="processAuth()" id="authSubmitBtn" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold rounded-xl shadow-lg transition text-sm">Đăng nhập ngay 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= CÁC MODULE JAVASCRIPT ================= -->
+    <script src="js/state.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/lab.js"></script>
+    <script src="js/practice.js"></script>
+    <script src="js/teacher.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
