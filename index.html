@@ -17,7 +17,40 @@
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/style.css">
+    <style id="module-style">
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.glass-panel {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.5);
+}
+
+.nav-active {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+}
+
+.hero-gradient {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(99, 102, 241, 0.25) 50%, rgba(236, 72, 153, 0.25) 100%);
+}
+
+.custom-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.3);
+    border-radius: 10px;
+}
+
+    </style>
 </head>
 <body class="bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-slate-100 min-h-screen flex flex-col p-4 md:p-6 justify-center items-center">
 
@@ -72,7 +105,7 @@
                         <h2 class="text-3xl md:text-5xl font-black bg-gradient-to-r from-cyan-300 via-pink-300 to-amber-300 bg-clip-text text-transparent leading-tight">Khám Phá Thế Giới Dao Động Sống Động Như Thật!</h2>
                         <p class="text-slate-200 text-sm md:text-base leading-relaxed font-medium">Chào mừng bạn đến với <b>Phòng Thí Nghiệm Số</b> – không gian học tập số hóa đỉnh cao dành riêng cho học sinh lớp 11. Vui lòng <b>Đăng nhập</b> hoặc <b>Đăng ký</b> tài khoản ở góc trên để mở khóa Lộ trình, Thí nghiệm ảo chỉnh thông số mượt mà và hệ thống Bài tập!</p>
                         
-                        <div class="pt-3 flex flex-wrap gap-4">
+                        <div id="heroLoginBtnContainer" class="pt-3 flex flex-wrap gap-4">
                             <button onclick="openAuthModal('login')" class="px-7 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold rounded-2xl shadow-xl transition text-sm">🔑 Đăng nhập ngay để bắt đầu</button>
                         </div>
                     </div>
@@ -345,13 +378,1933 @@
     </div>
 
     <!-- ================= CÁC MODULE JAVASCRIPT ================= -->
-    <script src="js/state.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/navigation.js"></script>
-    <script src="js/lab.js"></script>
-    <script src="js/practice.js"></script>
-    <script src="js/teacher.js"></script>
-    <script src="js/main.js"></script>
+    <!-- MODULE: STATE (js/state.js) -->
+    <script id="module-state">
+// ================= MODULE: TRẠNG THÁI ỨNG DỤNG (STATE) =================
+
+let currentLab = 'spring';
+let selectedSelfLevel = null;
+let activeSelfExamId = null;
+let activeTeacherExamId = null;
+let practiceSubMode = 'teacher';
+
+// Trạng thái xác thực
+let authMode = 'login';
+let authRole = 'student';
+let loggedInUser = null;
+
+// Quản lý lớp học và tiến độ cho giáo viên
+let teacherClasses = ['11C1', '11C2', '11C3'];
+let activeSelectedClass = null;
+
+let studentProgressData = [
+    { name: "Nguyễn Văn An", classCode: "11C1", examTitle: "Đề kiểm tra 15 phút: Con lắc lò xo nâng cao", score: "8.5", time: "14 phút 20 giây" },
+    { name: "Trần Thị Bình", classCode: "11C1", examTitle: "Đề kiểm tra 15 phút: Con lắc lò xo nâng cao", score: "9.2", time: "11 phút 05 giây" },
+    { name: "Lê Hoàng Cường", classCode: "11C2", examTitle: "Đề kiểm tra 15 phút: Con lắc lò xo nâng cao", score: "6.8", time: "15 phút 00 giây" },
+    { name: "Phạm Minh Thư", classCode: "11C3", examTitle: "Đề kiểm tra 15 phút: Con lắc lò xo nâng cao", score: "9.5", time: "10 phút 45 giây" }
+];
+
+// Thông số mô phỏng thí nghiệm
+let simTime = 0;
+let isPaused = false;
+let paramA = 50;
+let paramW = 5.0;
+let paramPhi = 0.0;
+let paramSpeed = 1.0;
+
+// Lưu trữ lựa chọn và trạng thái nộp bài
+let teacherExamChoices = {};
+let teacherExamSubmitted = {};
+let labUserChoices = {};
+let labSubmitted = {};
+let studentExamChoices = {};
+let studentExamSubmitted = {};
+
+// Theo dõi đợt đề hiện tại (Batch) của từng mức độ (mỗi đợt 20 đề)
+let selfExamBatch = {
+    easy: 1,
+    medium: 1,
+    hard: 1
+};
+
+// Lưu kết quả điểm số và phân tích câu sai của học sinh ở từng đề
+// Cấu trúc: { [examId]: { examId, examNum, batchNum, level, title, score, correctCount, totalQ, submittedAt, wrongTopics: { [topicId]: count } } }
+let studentExamResults = {};
+
+    </script>
+
+    <!-- MODULE: DATA (js/data.js) -->
+    <script id="module-data">
+// ================= MODULE: DỮ LIỆU & NGÂN HÀNG CÂU HỎI (DATA) =================
+
+// Danh mục các mảng kiến thức Chương Dao Động dùng để thống kê lỗi sai và gợi ý ôn tập
+const KNOWLEDGE_TOPICS = {
+    eq_phase: {
+        id: 'eq_phase',
+        name: 'Phương trình dao động & Pha dao động',
+        formula: '$x = A\\cos(\\omega t + \\varphi)$, xác định biên độ $A$, tần số góc $\\omega$, pha ban đầu $\\varphi$ và pha dao động tại thời điểm $t$.',
+        advice: 'Chú ý đổi hàm $\\sin$ sang $\\cos$ hoặc kiểm tra dấu của vận tốc tại $t = 0$ ($v > 0 \\implies \\varphi < 0$).',
+        labExp: 'spring',
+        labLabel: 'Ôn lại ở TN Con lắc lò xo'
+    },
+    spring_period: {
+        id: 'spring_period',
+        name: 'Tần số góc, Chu kỳ & Độ cứng Con lắc lò xo',
+        formula: '$\\omega = \\sqrt{\\frac{k}{m}}$, $T = 2\\pi\\sqrt{\\frac{m}{k}}$, $f = \\frac{1}{2\\pi}\\sqrt{\\frac{k}{m}}$, $\\Delta l_0 = \\frac{mg}{k}$.',
+        advice: 'Luôn nhớ đổi khối lượng $m$ từ gam ($\\text{g}$) sang kilôgam ($\\text{kg}$) trước khi thay vào công thức!',
+        labExp: 'spring',
+        labLabel: 'Ôn lại ở TN Con lắc lò xo'
+    },
+    vel_acc: {
+        id: 'vel_acc',
+        name: 'Vận tốc, Gia tốc & Hệ thức độc lập thời gian',
+        formula: '$v_{\\max} = \\omega A$, $a_{\\max} = \\omega^2 A$, hệ thức độc lập: $A^2 = x^2 + \\frac{v^2}{\\omega^2}$, lực kéo về $F_{\\max} = kA$.',
+        advice: 'Kiểm tra kỹ đơn vị giữa $\\text{cm/s}$ và $\\text{m/s}^2$, vận tốc cực đại ở VTCB còn gia tốc cực đại ở vị trí biên.',
+        labExp: 'spring',
+        labLabel: 'Ôn lại ở TN Con lắc lò xo'
+    },
+    pendulum_period: {
+        id: 'pendulum_period',
+        name: 'Chu kỳ, Tần số & Dao động Con lắc đơn',
+        formula: '$T = 2\\pi\\sqrt{\\frac{l}{g}}$, $\\omega = \\sqrt{\\frac{g}{l}}$, $v_{\\max} = \\sqrt{gl}\\alpha_0$ ($\\alpha_0$ tính bằng $\\text{rad}$).',
+        advice: 'Chu kỳ con lắc đơn tỉ lệ thuận với $\\sqrt{l}$, tỉ lệ nghịch với $\\sqrt{g}$ và KHÔNG phụ thuộc khối lượng vật nặng.',
+        labExp: 'pendulum',
+        labLabel: 'Ôn lại ở TN Con lắc đơn'
+    },
+    energy: {
+        id: 'energy',
+        name: 'Động năng, Thế năng & Cơ năng dao động',
+        formula: '$W = \\frac{1}{2}kA^2 = \\frac{1}{2}m\\omega^2 A^2$, $W_t = \\frac{1}{2}kx^2$, $W_d = W - W_t$.',
+        advice: 'Sai lầm phổ biến nhất là quên đổi biên độ $A$ và li độ $x$ từ $\\text{cm}$ sang $\\text{m}$ khi tính năng lượng ra Joule ($\\text{J}$).',
+        labExp: 'spring',
+        labLabel: 'Ôn lại ở TN Con lắc lò xo'
+    },
+    damped_forced: {
+        id: 'damped_forced',
+        name: 'Dao động tắt dần, Cưỡng bức & Cộng hưởng',
+        formula: 'Độ giảm biên độ sau 1 chu kỳ: $\\Delta A = \\frac{4\\mu mg}{k}$; Điều kiện cộng hưởng: $f = f_0$ ($\\Omega = \\omega_0$).',
+        advice: 'Khi xảy ra cộng hưởng, tần số ngoại lực bằng tần số riêng của hệ và biên độ dao động cưỡng bức đạt cực đại.',
+        labExp: 'forced',
+        labLabel: 'Ôn lại ở TN Cưỡng bức & Cộng hưởng'
+    },
+    time_path: {
+        id: 'time_path',
+        name: 'Quãng đường & Thời gian trong dao động',
+        formula: 'Quãng đường trong 1 chu kỳ $S_{1T} = 4A$, nửa chu kỳ $S_{T/2} = 2A$; Thời gian từ VTCB đến $A/2$ là $T/12$.',
+        advice: 'Tách thời gian hoặc số chu kỳ thành bội số của $T/2$ (luôn đi được $2A$) trước khi tính phần lẻ.',
+        labExp: 'spring',
+        labLabel: 'Ôn lại ở TN Con lắc lò xo'
+    }
+};
+
+// Danh sách đề giáo viên giao
+let teacherAssignedExams = [
+    {
+        id: 't_ex_1',
+        title: 'Đề kiểm tra 15 phút: Con lắc lò xo nâng cao',
+        date: '12/11/2026',
+        questions: [
+            { q: "Câu 1: Một vật dao động điều hòa $x = 5\\cos(10t)\\text{ cm}$. Tốc độ cực đại là:", options: ["A. $25\\text{ cm/s}$", "B. $50\\text{ cm/s}$", "C. $100\\text{ cm/s}$", "D. $5\\text{ cm/s}$"], correct: 1, explain: "$v_{\\max} = \\omega A = 10 \\times 5 = 50\\text{ cm/s}$." },
+            { q: "Câu 2: Cơ năng của con lắc lò xo tính bằng:", options: ["A. $0.5kA$", "B. $0.5kA^2$", "C. $kA^2$", "D. $0.5mv^2$"], correct: 1, explain: "Công thức chuẩn $W = \\frac{1}{2}kA^2$." }
+        ]
+    }
+];
+
+// Hàm trộn phương án và đặt nhãn A, B, C, D tự động, trả về { options, correct }
+function buildOptionsWithCorrect(correctValStr, wrongValsArr, seedIndex) {
+    const pos = seedIndex % 4;
+    const raw = [];
+    let wIdx = 0;
+    for (let k = 0; k < 4; k++) {
+        if (k === pos) {
+            raw.push(correctValStr);
+        } else {
+            raw.push(wrongValsArr[wIdx++]);
+        }
+    }
+    const labels = ['A', 'B', 'C', 'D'];
+    return {
+        options: raw.map((val, idx) => `${labels[idx]}. ${val}`),
+        correct: pos
+    };
+}
+
+// Sinh 30 câu hỏi tính toán độc nhất theo Mức độ, Số đề (1..20) và Đợt đề (batchNum = 1, 2, 3...)
+function generateUnique30Questions(levelName, examNum, batchNum = 1) {
+    let list = [];
+    const levelSeed = levelName === 'easy' ? 1 : (levelName === 'medium' ? 2 : 3);
+    const batchOffset = (batchNum - 1) * 37 + levelSeed * 13;
+
+    for (let i = 1; i <= 30; i++) {
+        // Các biến số vật lý thay đổi hoàn toàn theo batchNum, examNum và câu i
+        let A_v = ((examNum * 3 + i * 2 + batchOffset) % 14) + 3; // 3 -> 16 cm
+        let w_v = ((examNum * 2 + i + batchOffset) % 16) + 4;     // 4 -> 19 rad/s
+        let m_v = (((examNum * 19 + i * 13 + batchOffset * 7) % 40) + 10) * 10; // 100 -> 490 g
+        let k_v = 40 + ((examNum * 5 + i * 3 + batchOffset * 2) % 120); // 40 -> 159 N/m
+        let l_v = (0.35 + ((examNum * 7 + i * 3 + batchOffset) % 18) * 0.05).toFixed(2); // m
+
+        let qObj = {};
+        // 10 dạng bài toán tính toán xoay vòng và dịch chuyển theo batchNum
+        let typeIdx = (examNum + i + batchNum * 3) % 10;
+        let batchTag = batchNum > 1 ? ` [Bộ đề mới #${batchNum}]` : '';
+        let lvlTitle = levelName === 'easy' ? 'Dễ' : (levelName === 'medium' ? 'Trung bình' : 'Nâng cao');
+
+        if (typeIdx === 0) {
+            // Dạng 1: Xác định pha ban đầu / biên độ từ phương trình
+            let denom = ((i + batchNum) % 5) + 2; // 2, 3, 4, 5, 6
+            let sign = (examNum + batchNum) % 2 === 0 ? '+' : '-';
+            let correctStr = `$${sign === '-' ? '-' : ''}\\frac{\\pi}{${denom}}\\text{ rad}$`;
+            let built = buildOptionsWithCorrect(
+                correctStr,
+                [`$0\\text{ rad}$`, `$${sign === '-' ? '+' : '-'}\\frac{\\pi}{${denom}}\\text{ rad}$`, `$\\frac{\\pi}{${denom + 1}}\\text{ rad}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'eq_phase';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Một vật dao động điều hòa có phương trình $x = ${A_v}\\cos(${w_v}t ${sign} \\frac{\\pi}{${denom}})\\text{ (cm)}$. Pha ban đầu $\\varphi$ của dao động là:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `So sánh với phương trình chuẩn $x = A\\cos(\\omega t + \\varphi)$, ta có pha ban đầu $\\varphi = ${sign === '-' ? '-' : ''}\\frac{\\pi}{${denom}}\\text{ rad}$.`;
+        } else if (typeIdx === 1) {
+            // Dạng 2: Tần số góc con lắc lò xo
+            let w_calc = Math.sqrt(k_v / (m_v / 1000)).toFixed(1);
+            let w_w1 = (parseFloat(w_calc) + 2.5).toFixed(1);
+            let w_w2 = Math.max(1.2, (parseFloat(w_calc) - 1.8)).toFixed(1);
+            let w_w3 = (parseFloat(w_calc) * 2).toFixed(1);
+            let built = buildOptionsWithCorrect(
+                `$${w_calc}\\text{ rad/s}$`,
+                [`$${w_w1}\\text{ rad/s}$`, `$${w_w2}\\text{ rad/s}$`, `$${w_w3}\\text{ rad/s}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'spring_period';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Con lắc lò xo có vật nặng khối lượng $m = ${m_v}\\text{ g}$ và lò xo có độ cứng $k = ${k_v}\\text{ N/m}$. Tần số góc $\\omega$ của con lắc là:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Đổi $m = ${m_v}\\text{ g} = ${m_v / 1000}\\text{ kg}$. Áp dụng $\\omega = \\sqrt{\\frac{k}{m}} = \\sqrt{\\frac{${k_v}}{${m_v / 1000}}} \\approx ${w_calc}\\text{ rad/s}$.`;
+        } else if (typeIdx === 2) {
+            // Dạng 3: Tốc độ cực đại
+            let vmax = A_v * w_v;
+            let built = buildOptionsWithCorrect(
+                `$${vmax}\\text{ cm/s}$`,
+                [`$${(vmax / 2).toFixed(1)}\\text{ cm/s}$`, `$${vmax * w_v}\\text{ cm/s}$`, `$${vmax + 15}\\text{ cm/s}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'vel_acc';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Một chất điểm dao động điều hòa với biên độ $A = ${A_v}\\text{ cm}$ và tần số góc $\\omega = ${w_v}\\text{ rad/s}$. Tốc độ cực đại $v_{\\max}$ của chất điểm là:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Tốc độ cực đại khi qua VTCB: $v_{\\max} = \\omega A = ${w_v} \\times ${A_v} = ${vmax}\\text{ cm/s}$.`;
+        } else if (typeIdx === 3) {
+            // Dạng 4: Chu kỳ con lắc đơn
+            let g_val = 9.87;
+            let T_calc = (2 * Math.PI * Math.sqrt(parseFloat(l_v) / g_val)).toFixed(2);
+            let T_w1 = (parseFloat(T_calc) + 0.45).toFixed(2);
+            let T_w2 = Math.max(0.35, parseFloat(T_calc) - 0.35).toFixed(2);
+            let T_w3 = (parseFloat(T_calc) * 1.5).toFixed(2);
+            let built = buildOptionsWithCorrect(
+                `$${T_calc}\\text{ s}$`,
+                [`$${T_w1}\\text{ s}$`, `$${T_w2}\\text{ s}$`, `$${T_w3}\\text{ s}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'pendulum_period';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Con lắc đơn có chiều dài dây treo $l = ${l_v}\\text{ m}$ tại nơi có gia tốc trọng trường $g = 9.87\\text{ m/s}^2$. Chu kỳ dao động nhỏ $T$ của con lắc là:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Chu kỳ con lắc đơn: $T = 2\\pi\\sqrt{\\frac{l}{g}} = 2\\pi\\sqrt{\\frac{${l_v}}{9.87}} \\approx ${T_calc}\\text{ s}$.`;
+        } else if (typeIdx === 4) {
+            // Dạng 5: Cơ năng con lắc lò xo
+            let Am = A_v / 100;
+            let W_calc = (0.5 * k_v * Am * Am).toFixed(3);
+            let W_w1 = (k_v * Am * Am).toFixed(3);
+            let W_w2 = (0.5 * k_v * A_v).toFixed(1);
+            let W_w3 = (0.25 * k_v * Am * Am).toFixed(3);
+            let built = buildOptionsWithCorrect(
+                `$${W_calc}\\text{ J}$`,
+                [`$${W_w1}\\text{ J}$`, `$${W_w2}\\text{ J}$`, `$${W_w3}\\text{ J}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'energy';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Con lắc lò xo có độ cứng $k = ${k_v}\\text{ N/m}$ dao động điều hòa với biên độ $A = ${A_v}\\text{ cm}$. Cơ năng $W$ của con lắc bằng:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Đổi $A = ${A_v}\\text{ cm} = ${Am}\\text{ m}$. Cơ năng: $W = \\frac{1}{2}kA^2 = 0.5 \\times ${k_v} \\times (${Am})^2 \\approx ${W_calc}\\text{ J}$.`;
+        } else if (typeIdx === 5) {
+            // Dạng 6: Gia tốc cực đại
+            let amax_cms2 = w_v * w_v * A_v;
+            let amax_ms2 = (amax_cms2 / 100).toFixed(2);
+            let built = buildOptionsWithCorrect(
+                `$${amax_ms2}\\text{ m/s}^2$`,
+                [`$${( (w_v * A_v) / 100 ).toFixed(2)}\\text{ m/s}^2$`, `$${(amax_cms2 / 50).toFixed(2)}\\text{ m/s}^2$`, `$${(amax_cms2 / 200).toFixed(2)}\\text{ m/s}^2$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'vel_acc';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Vật dao động điều hòa với biên độ $A = ${A_v}\\text{ cm}$ và tần số góc $\\omega = ${w_v}\\text{ rad/s}$. Độ lớn gia tốc cực đại $a_{\\max}$ (tính theo $\\text{m/s}^2$) là:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Ta có $a_{\\max} = \\omega^2 A = ${w_v}^2 \\times ${A_v} = ${amax_cms2}\\text{ cm/s}^2 = ${amax_ms2}\\text{ m/s}^2$.`;
+        } else if (typeIdx === 6) {
+            // Dạng 7: Hệ thức độc lập thời gian tìm biên độ A
+            let x_now = ((i + batchNum) % 4) + 3; // 3..6 cm
+            let v_over_w = ((examNum + batchNum) % 4) + 4; // 4..7 cm
+            let v_now = v_over_w * w_v;
+            let A_calc = Math.sqrt(x_now * x_now + v_over_w * v_over_w).toFixed(2);
+            let built = buildOptionsWithCorrect(
+                `$${A_calc}\\text{ cm}$`,
+                [`$${(x_now + v_over_w).toFixed(2)}\\text{ cm}$`, `$${Math.abs(x_now - v_over_w).toFixed(2)}\\text{ cm}$`, `$${(parseFloat(A_calc) * 1.5).toFixed(2)}\\text{ cm}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'vel_acc';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Vật dao động điều hòa với $\\omega = ${w_v}\\text{ rad/s}$. Khi vật có li độ $x = ${x_now}\\text{ cm}$ thì tốc độ là $v = ${v_now}\\text{ cm/s}$. Biên độ dao động $A$ là:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Áp dụng hệ thức độc lập: $A = \\sqrt{x^2 + \\frac{v^2}{\\omega^2}} = \\sqrt{${x_now}^2 + \\left(\\frac{${v_now}}{${w_v}}\\right)^2} = \\sqrt{${x_now * x_now} + ${v_over_w * v_over_w}} \\approx ${A_calc}\\text{ cm}$.`;
+        } else if (typeIdx === 7) {
+            // Dạng 8: Quãng đường đi được trong n chu kỳ
+            let numT = ((i + batchNum) % 3) + 1.5; // 1.5, 2.5, 3.5 chu kỳ
+            let S_calc = numT * 4 * A_v;
+            let built = buildOptionsWithCorrect(
+                `$${S_calc}\\text{ cm}$`,
+                [`$${numT * 2 * A_v}\\text{ cm}$`, `$${(S_calc + 2 * A_v)}\\text{ cm}$`, `$${4 * A_v}\\text{ cm}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'time_path';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Một vật dao động điều hòa với biên độ $A = ${A_v}\\text{ cm}$. Quãng đường vật đi được trong khoảng thời gian $\\Delta t = ${numT}T$ (với $T$ là chu kỳ) bằng:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Trong mỗi nửa chu kỳ ($0.5T$) vật luôn đi được $2A$, trong $1T$ đi được $4A$. Vậy trong $${numT}T$ quãng đường là $S = ${numT} \\times 4A = ${numT} \\times 4 \\times ${A_v} = ${S_calc}\\text{ cm}$.`;
+        } else if (typeIdx === 8) {
+            // Dạng 9: Dao động tắt dần - độ giảm biên độ sau 1 chu kỳ
+            let mu = (((i + batchNum) % 4) + 1) * 0.02; // 0.02, 0.04, 0.06, 0.08
+            let m_kg = (m_v / 1000);
+            let deltaA_m = (4 * mu * m_kg * 10) / k_v;
+            let deltaA_cm = (deltaA_m * 100).toFixed(2);
+            let built = buildOptionsWithCorrect(
+                `$${deltaA_cm}\\text{ cm}$`,
+                [`$${(deltaA_m * 50).toFixed(2)}\\text{ cm}$`, `$${(deltaA_m * 25).toFixed(2)}\\text{ cm}$`, `$${(deltaA_m * 200).toFixed(2)}\\text{ cm}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'damped_forced';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Con lắc lò xo ngang có $k = ${k_v}\\text{ N/m}$, $m = ${m_v}\\text{ g}$, hệ số ma sát trượt $\\mu = ${mu.toFixed(2)}$, lấy $g = 10\\text{ m/s}^2$. Độ giảm biên độ sau mỗi chu kỳ là:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Độ giảm biên độ sau 1 chu kỳ: $\\Delta A = \\frac{4\\mu mg}{k} = \\frac{4 \\times ${mu.toFixed(2)} \\times ${m_kg} \\times 10}{${k_v}}\\text{ m} \\approx ${deltaA_cm}\\text{ cm}$.`;
+        } else {
+            // Dạng 10: Điều kiện cộng hưởng cơ học
+            let f0 = ((examNum + i + batchNum) % 12) + 2; // 2 -> 13 Hz
+            let T_ext = (1 / f0).toFixed(3);
+            let built = buildOptionsWithCorrect(
+                `$f = ${f0}\\text{ Hz}$`,
+                [`$f = ${f0 * 2}\\text{ Hz}$`, `$f = ${(f0 / 2).toFixed(1)}\\text{ Hz}$`, `$f = ${f0 + 3}\\text{ Hz}$`],
+                i + examNum + batchNum
+            );
+            qObj.topicId = 'damped_forced';
+            qObj.q = `Câu ${i} (Đề ${examNum} - ${lvlTitle}${batchTag}): Một hệ cơ học có tần số dao động riêng $f_0 = ${f0}\\text{ Hz}$ chịu tác dụng của ngoại lực tuần hoàn. Để xảy ra hiện tượng cộng hưởng cơ lớn nhất thì tần số ngoại lực $f$ phải bằng:`;
+            qObj.options = built.options;
+            qObj.correct = built.correct;
+            qObj.explain = `Điều kiện cộng hưởng cơ học là tần số ngoại lực cưỡng bức bằng tần số riêng của hệ: $f = f_0 = ${f0}\\text{ Hz}$ (chu kỳ $T = ${T_ext}\\text{ s}$).`;
+        }
+
+        const topicMeta = KNOWLEDGE_TOPICS[qObj.topicId];
+        list.push({
+            id: i,
+            topicId: qObj.topicId,
+            topicName: topicMeta ? topicMeta.name : 'Kiến thức chung',
+            level: levelName === 'easy' ? "🟢 Mức độ Dễ" : (levelName === 'medium' ? "🟡 Mức độ Trung bình" : "🔴 Mức độ Nâng cao"),
+            q: qObj.q,
+            options: qObj.options,
+            correct: qObj.correct,
+            explain: qObj.explain
+        });
+    }
+    return list;
+}
+
+// Hàm khởi tạo danh sách 20 đề cho một mức độ và đợt đề (batchNum)
+function buildSelfExamSetForLevel(lvl, batchNum = 1) {
+    const arr = [];
+    const lvlLabel = lvl === 'easy' ? 'Dễ' : (lvl === 'medium' ? 'Trung bình' : 'Nâng cao');
+    const batchSuffix = batchNum > 1 ? ` (Bộ đề mới đợt #${batchNum})` : '';
+    for (let d = 1; d <= 20; d++) {
+        arr.push({
+            id: `${lvl}_b${batchNum}_${d}`,
+            examNum: d,
+            batchNum: batchNum,
+            level: lvl,
+            title: `Đề số ${d} - 30 Câu Mức độ ${lvlLabel}${batchSuffix}`,
+            questions: generateUnique30Questions(lvl, d, batchNum)
+        });
+    }
+    return arr;
+}
+
+let selfPracticeExams = {
+    easy: buildSelfExamSetForLevel('easy', 1),
+    medium: buildSelfExamSetForLevel('medium', 1),
+    hard: buildSelfExamSetForLevel('hard', 1)
+};
+
+// 15 Câu hỏi đặc thù dưới mỗi thí nghiệm
+const labExercisesData = {
+    spring: [
+        { id: 1, level: "⭐ Cơ bản", q: "1. Biểu thức tần số góc của con lắc lò xo là:", options: ["A. $\\omega = \\sqrt{km}$", "B. $\\omega = \\sqrt{k/m}$", "C. $\\omega = \\sqrt{m/k}$", "D. $\\omega = 2\\pi\\sqrt{m/k}$"], correct: 1, explain: "$\\omega = \\sqrt{k/m}$." },
+        { id: 2, level: "⭐ Cơ bản", q: "2. Chu kỳ dao động của con lắc lò xo tính bằng:", options: ["A. $T = 2\\pi\\sqrt{m/k}$", "B. $T = 2\\pi\\sqrt{k/m}$", "C. $T = \\sqrt{m/k}$", "D. $T = \\pi\\sqrt{m/k}$"], correct: 0, explain: "$T = 2\\pi\\sqrt{m/k}$." },
+        { id: 3, level: "⭐ Cơ bản", q: "3. Vận tốc cực đại của con lắc lò xo là:", options: ["A. $v_{\\max} = \\omega A$", "B. $v_{\\max} = \\omega^2 A$", "C. $v_{\\max} = \\omega / A$", "D. $v_{\\max} = A / \\omega$"], correct: 0, explain: "$v_{\\max} = \\omega A$." },
+        { id: 4, level: "⭐ Cơ bản", q: "4. Gia tốc cực đại của con lắc lò xo là:", options: ["A. $a_{\\max} = \\omega A$", "B. $a_{\\max} = \\omega^2 A$", "C. $a_{\\max} = \\omega A^2$", "D. $a_{\\max} = \\omega^2 A^2$"], correct: 1, explain: "$a_{\\max} = \\omega^2 A$." },
+        { id: 5, level: "⭐ Cơ bản", q: "5. Cơ năng của con lắc lò xo là:", options: ["A. $W = 0.5kA$", "B. $W = 0.5kA^2$", "C. $W = kA^2$", "D. $0.5mv^2$"], correct: 1, explain: "$W = 0.5kA^2$." },
+        { id: 6, level: "⭐⭐ Thông hiểu", q: "6. Lực kéo về tác dụng lên con lắc lò xo luôn hướng về:", options: ["A. biên dương", "B. biên âm", "C. vị trí cân bằng", "D. vô cực"], correct: 2, explain: "$F = -kx$ luôn hướng về VTCB." },
+        { id: 7, level: "⭐⭐ Thông hiểu", q: "7. Quãng đường vật đi được trong một chu kỳ là:", options: ["A. $A$", "B. $2A$", "C. $3A$", "D. $4A$"], correct: 3, explain: "$S = 4A$." },
+        { id: 8, level: "⭐⭐ Thông hiểu", q: "8. Khi khối lượng vật tăng gấp 4 lần thì chu kỳ con lắc lò xo sẽ:", options: ["A. tăng 2 lần", "B. tăng 4 lần", "C. giảm 2 lần", "D. không đổi"], correct: 0, explain: "$T \\propto \\sqrt{m}$ nên $m$ tăng 4 lần thì $T$ tăng 2 lần." },
+        { id: 9, level: "⭐⭐ Thông hiểu", q: "9. Tại vị trí cân bằng của con lắc lò xo, độ lớn vận tốc đạt:", options: ["A. cực tiểu", "B. cực đại", "C. bằng 0", "D. không đổi"], correct: 1, explain: "Tại VTCB tốc độ đạt cực đại." },
+        { id: 10, level: "⭐⭐ Thông hiểu", q: "10. Vị trí động năng bằng thế năng có li độ:", options: ["A. $x = \\pm A$", "B. $x = \\pm A/2$", "C. $x = \\pm A/\\sqrt{2}$", "D. $x = 0$"], correct: 2, explain: "$W_d = W_t \\implies x = \\pm A/\\sqrt{2}$." },
+        { id: 11, level: "⭐⭐⭐ Vận dụng cao", q: "11. Lò xo có độ cứng $k$ cắt thành 2 nửa bằng nhau, độ cứng mỗi nửa là:", options: ["A. $0.5k$", "B. $k$", "C. $2k$", "D. $4k$"], correct: 2, explain: "Độ cứng tỉ lệ nghịch với chiều dài, cắt đôi thì độ cứng tăng gấp đôi." },
+        { id: 12, level: "⭐⭐⭐ Vận dụng cao", q: "12. Hai lò xo ghép song song có độ cứng tương đương:", options: ["A. $k_1 + k_2$", "B. $k_1 k_2 / (k_1 + k_2)$", "C. $|k_1 - k_2|$", "D. $\\sqrt{k_1 k_2}$"], correct: 0, explain: "Ghép song song: $k = k_1 + k_2$." },
+        { id: 13, level: "⭐⭐⭐ Vận dụng cao", q: "13. Thời gian ngắn nhất đi từ VTCB đến li độ $A/2$ là:", options: ["A. $T/4$", "B. $T/6$", "C. $T/8$", "D. $T/12$"], correct: 3, explain: "Thời gian từ VTCB đến $A/2$ là $T/12$." },
+        { id: 14, level: "⭐⭐⭐ Vận dụng cao", q: "14. Hệ thức độc lập thời gian giữa $x$ và $v$ là:", options: ["A. $A^2 = x^2 + v^2/\\omega^2$", "B. $A = x + v$", "C. $x^2 + v^2 = 1$", "D. $v = \\omega x$"], correct: 0, explain: "$A^2 = x^2 + v^2/\\omega^2$." },
+        { id: 15, level: "⭐⭐⭐ Vận dụng cao", q: "15. Đồ thị biểu diễn li độ theo thời gian của con lắc lò xo là:", options: ["A. đường thẳng", "B. parabol", "C. hình sin", "D. elip"], correct: 2, explain: "Đồ thị li độ theo thời gian là đường hình sin." }
+    ],
+    pendulum: [
+        { id: 1, level: "⭐ Cơ bản", q: "1. Công thức tính chu kỳ con lắc đơn là:", options: ["A. $T = 2\\pi\\sqrt{g/l}$", "B. $T = 2\\pi\\sqrt{l/g}$", "C. $T = \\sqrt{l/g}$", "D. $T = 2\\pi l/g$"], correct: 1, explain: "$T = 2\\pi\\sqrt{l/g}$." },
+        { id: 2, level: "⭐ Cơ bản", q: "2. Tần số góc của con lắc đơn là:", options: ["A. $\\omega = \\sqrt{l/g}$", "B. $\\omega = \\sqrt{g/l}$", "C. $\\omega = g/l$", "D. $\\omega = l/g$"], correct: 1, explain: "$\\omega = \\sqrt{g/l}$." },
+        { id: 3, level: "⭐ Cơ bản", q: "3. Chu kỳ con lắc đơn KHÔNG phụ thuộc vào yếu tố nào?", options: ["A. Chiều dài dây treo", "B. Gia tốc trọng trường", "C. Khối lượng vật nặng", "D. Vị trí địa lý"], correct: 2, explain: "Chu kỳ con lắc đơn độc lập với khối lượng $m$." },
+        { id: 4, level: "⭐ Cơ bản", q: "4. Cơ năng của con lắc đơn với biên độ góc nhỏ $\\alpha_0$ là:", options: ["A. $W = 0.5mgl\\alpha_0^2$", "B. $W = mgl\\alpha_0$", "C. $W = 0.5mv^2$", "D. $W = mgl$"], correct: 0, explain: "$W = 0.5mgl\\alpha_0^2$." },
+        { id: 5, level: "⭐ Cơ bản", q: "5. Vận tốc cực đại của con lắc đơn là:", options: ["A. $v_{\\max} = \\omega l$", "B. $v_{\\max} = \\sqrt{gl}\\alpha_0$", "C. $v_{\\max} = g\\alpha_0$", "D. $v_{\\max} = \\omega \\alpha_0$"], correct: 1, explain: "$v_{\\max} = \\sqrt{gl}\\alpha_0$." },
+        { id: 6, level: "⭐⭐ Thông hiểu", q: "6. Lực kéo về của con lắc đơn phụ thuộc vào li độ cong $s$ là:", options: ["A. $F = -mg s / l$", "B. $F = -ks$", "C. $F = -m\\omega^2 x$", "D. $F = -mg\\alpha$"], correct: 0, explain: "$F = -mg \\frac{s}{l}$." },
+        { id: 7, level: "⭐⭐ Thông hiểu", q: "7. Lực căng dây treo con lắc đơn đạt cực đại tại vị trí:", options: ["A. Biên dương", "B. Biên âm", "C. Vị trí cân bằng", "D. Li độ bất kỳ"], correct: 2, explain: "Ở VTCB vận tốc lớn nhất nên lực căng lớn nhất." },
+        { id: 8, level: "⭐⭐ Thông hiểu", q: "8. Lực căng dây treo con lắc đơn đạt cực tiểu tại vị trí:", options: ["A. Vị trí cân bằng", "B. Vị trí biên", "C. Li độ $A/2$", "D. Li độ $A/\\sqrt{2}$"], correct: 1, explain: "Ở biên vận tốc bằng 0 nên lực căng nhỏ nhất." },
+        { id: 9, level: "⭐⭐ Thông hiểu", q: "9. Khi đưa con lắc đơn lên độ cao lớn (giả sử $g$ giảm), chu kỳ $T$ sẽ:", options: ["A. tăng lên", "B. giảm xuống", "C. không đổi", "D. bằng 0"], correct: 0, explain: "$g$ giảm thì $T$ tăng." },
+        { id: 10, level: "⭐⭐ Thông hiểu", q: "10. Điều kiện để con lắc đơn dao động điều hòa là góc lệch $\\alpha_0$ phải nhỏ và:", options: ["A. bỏ qua ma sát", "B. khối lượng lớn", "C. dây treo rất dài", "D. không kể trọng lực"], correct: 0, explain: "Góc nhỏ và bỏ qua mọi ma sát." },
+        { id: 11, level: "⭐⭐⭐ Vận dụng cao", q: "11. Nếu chiều dài con lắc đơn tăng 4 lần thì chu kỳ $T$ sẽ:", options: ["A. tăng 2 lần", "B. tăng 4 lần", "C. giảm 2 lần", "D. không đổi"], correct: 0, explain: "$T \\propto \\sqrt{l}$ nên tăng 4 lần thì $T$ tăng 2 lần." },
+        { id: 12, level: "⭐⭐⭐ Vận dụng cao", q: "12. Con lắc đơn có chu kỳ đúng bằng $2\\text{ s}$ gọi là:", options: ["A. con lắc giây", "B. con lắc nhanh", "C. con lắc chậm", "D. con lắc cộng hưởng"], correct: 0, explain: "Con lắc có $T = 2\\text{ s}$ là con lắc giây." },
+        { id: 13, level: "⭐⭐⭐ Vận dụng cao", q: "13. Con lắc đơn vướng đinh ở chính giữa dây khi qua VTCB, tỉ số chu kỳ trước và sau vướng đinh là:", options: ["A. $1$", "B. $\\sqrt{2}$", "C. $2$", "D. $0.5$"], correct: 1, explain: "Tỉ số $\\sqrt{l / (l/2)} = \\sqrt{2}$." },
+        { id: 14, level: "⭐⭐⭐ Vận dụng cao", q: "14. Con lắc đơn trong thang máy đi lên nhanh dần đều, chu kỳ $T$ sẽ:", options: ["A. tăng", "B. giảm", "C. không đổi", "D. bằng 0"], correct: 1, explain: "Gia tốc hiệu dụng $g' = g + a > g$ nên $T$ giảm." },
+        { id: 15, level: "⭐⭐⭐ Vận dụng cao", q: "15. Tổng chiều dài hai con lắc $l = l_1 + l_2$, hệ thức chu kỳ là:", options: ["A. $T = T_1 + T_2$", "B. $T^2 = T_1^2 + T_2^2$", "C. $T = \\sqrt{T_1 T_2}$", "D. $1/T = 1/T_1 + 1/T_2$"], correct: 1, explain: "Do $T^2 \\propto l$ nên $T^2 = T_1^2 + T_2^2$." }
+    ],
+    damped: [
+        { id: 1, level: "⭐ Cơ bản", q: "1. Dao động tắt dần là dao động có đại lượng nào giảm theo thời gian?", options: ["A. Tần số", "B. Chu kỳ", "C. Biên độ và cơ năng", "D. Vận tốc cực đại"], correct: 2, explain: "Biên độ và cơ năng giảm dần do ma sát." },
+        { id: 2, level: "⭐ Cơ bản", q: "2. Nguyên nhân chính gây ra dao động tắt dần thực tế là:", options: ["A. lực cản môi trường và ma sát", "B. biên độ ban đầu", "C. tần số ngoại lực", "D. khối lượng vật"], correct: 0, explain: "Do lực cản môi trường tiêu hao năng lượng." },
+        { id: 3, level: "⭐ Cơ bản", q: "3. Cơ năng trong dao động tắt dần chuyển hóa thành:", options: ["A. nhiệt năng", "B. điện năng", "C. quang năng", "D. hóa năng"], correct: 0, explain: "Năng lượng tiêu hao biến thành nhiệt năng." },
+        { id: 4, level: "⭐ Cơ bản", q: "4. Ứng dụng thực tế của dao động tắt dần là:", options: ["A. hộp đàn", "B. bộ giảm xóc xe ô tô", "C. đồng hồ quả lắc", "D. máy phát điện"], correct: 1, explain: "Bộ giảm xóc dùng lực cản để dập tắt dao động." },
+        { id: 5, level: "⭐ Cơ bản", q: "5. Biên độ dao động tắt dần giảm theo thời gian theo hàm:", options: ["A. bậc nhất", "B. mũ", "C. sin", "D. logarit"], correct: 1, explain: "Biên độ giảm theo hàm số mũ." },
+        { id: 6, level: "⭐⭐ Thông hiểu", q: "6. Để duy trì dao động tắt dần, người ta thường:", options: ["A. tăng khối lượng", "B. cung cấp năng lượng bù đúng phần tiêu hao sau mỗi chu kỳ", "C. tăng ma sát", "D. cắt ngắn lò xo"], correct: 1, explain: "Cung cấp đúng phần năng lượng hao hụt." },
+        { id: 7, level: "⭐⭐ Thông hiểu", q: "7. Độ giảm biên độ sau mỗi chu kỳ trên mặt phẳng ngang hệ số $\\mu$ là:", options: ["A. $\\mu mg/k$", "B. $2\\mu mg/k$", "C. $4\\mu mg/k$", "D. $\\mu mg/2k$"], correct: 2, explain: "$\\Delta A = 4\\mu mg / k$." },
+        { id: 8, level: "⭐⭐ Thông hiểu", q: "8. Số dao động $N$ thực hiện được trước khi dừng hẳn là:", options: ["A. $A_0 / \\Delta A$", "B. $\\Delta A / A_0$", "C. $A_0 \\Delta A$", "D. $2A_0 / \\Delta A$"], correct: 0, explain: "$N = A_0 / \\Delta A$." },
+        { id: 9, level: "⭐⭐ Thông hiểu", q: "9. Môi trường nào gây tắt dần nhanh nhất?", options: ["A. Không khí thường", "B. Chân không", "C. Dầu nhớt đặc", "D. Khí loãng"], correct: 2, explain: "Dầu nhớt đặc có lực cản nhớt cực lớn." },
+        { id: 10, level: "⭐⭐ Thông hiểu", q: "10. Biên độ giảm $10\\%$ sau một chu kỳ thì phần trăm cơ năng còn lại là:", options: ["A. $90\\%$", "B. $81\\%$", "C. $19\\%$", "D. $10\\%$"], correct: 1, explain: "$W \\propto A^2 \\implies (0.9)^2 = 0.81$ ($81\\%$)." },
+        { id: 11, level: "⭐⭐⭐ Vận dụng cao", q: "11. Độ giảm biên độ sau mỗi nửa chu kỳ trên mặt phẳng ngang là:", options: ["A. $\\mu mg/k$", "B. $2\\mu mg/k$", "C. $4\\mu mg/k$", "D. $\\mu mg/2k$"], correct: 1, explain: "Mỗi nửa chu kỳ giảm $2\\mu mg / k$." },
+        { id: 12, level: "⭐⭐⭐ Vận dụng cao", q: "12. Đồ thị biên độ theo thời gian của dao động tắt dần là:", options: ["A. đường thẳng", "B. đường cong ôm sát trục thời gian", "C. hình sin", "D. parabol"], correct: 1, explain: "Đường biên độ ôm sát trục thời gian." },
+        { id: 13, level: "⭐⭐⭐ Vận dụng cao", q: "13. Con lắc đơn dao động trong không khí chịu lực cản nhỏ, chu kỳ so với chân không:", options: ["A. nhỏ hơn", "B. lớn hơn một chút không đáng kể", "C. không đổi", "D. gấp đôi"], correct: 1, explain: "Lực cản nhỏ làm chu kỳ tăng không đáng kể." },
+        { id: 14, level: "⭐⭐⭐ Vận dụng cao", q: "14. Công suất cung cấp để duy trì dao động trong chu kỳ $T$ là:", options: ["A. $P = \\Delta W / T$", "B. $P = W \\times T$", "C. $P = W / T^2$", "D. $P = \\Delta W \\times T$"], correct: 0, explain: "$P = \\Delta W / T$." },
+        { id: 15, level: "⭐⭐⭐ Vận dụng cao", q: "15. Mục đích khảo sát dao động tắt dần trong phòng thí nghiệm là:", options: ["A. tăng ma sát", "B. hiểu rõ sự suy giảm cơ năng dưới lực cản", "C. làm hỏng hệ", "D. tăng biên độ"], correct: 1, explain: "Hiểu rõ sự suy giảm cơ năng." }
+    ],
+    forced: [
+        { id: 1, level: "⭐ Cơ bản", q: "1. Tần số của dao động cưỡng bức luôn bằng:", options: ["A. tần số riêng", "B. tần số ngoại lực cưỡng bức", "C. tổng tần số", "D. bằng 0"], correct: 1, explain: "Dao động cưỡng bức luôn có tần số bằng tần số ngoại lực." },
+        { id: 2, level: "⭐ Cơ bản", q: "2. Hiện tượng cộng hưởng cơ xảy ra khi:", options: ["A. $\\Omega = \\omega_0$", "B. $\\Omega > \\omega_0$", "C. $\\Omega < \\omega_0$", "D. Biên độ ngoại lực bằng 0"], correct: 0, explain: "Cộng hưởng khi tần số ngoại lực bằng tần số riêng." },
+        { id: 3, level: "⭐ Cơ bản", q: "3. Khi xảy ra cộng hưởng, biên độ dao động cưỡng bức đạt:", options: ["A. cực tiểu", "B. cực đại", "C. bằng 0", "D. không đổi"], correct: 1, explain: "Biên độ đạt giá trị lớn nhất." },
+        { id: 4, level: "⭐ Cơ bản", q: "4. Ứng dụng có ích của hiện tượng cộng hưởng thấy ở:", options: ["A. hộp đàn guitar", "B. cầu sập do lính đi đều", "C. ô tô rung", "D. nhà cao tầng"], correct: 0, explain: "Hộp đàn cộng hưởng âm thanh." },
+        { id: 5, level: "⭐ Cơ bản", q: "5. Tác hại nguy hiểm của cộng hưởng thấy ở:", options: ["A. máy thu thanh", "B. lính đi đều qua cầu", "C. giảm xóc", "D. con lắc"], correct: 1, explain: "Lính đi đều qua cầu có nguy cơ gây cộng hưởng sập cầu." },
+        { id: 6, level: "⭐⭐ Thông hiểu", q: "6. Pha của dao động cưỡng bức khi có cộng hưởng là:", options: ["A. vuông pha ngoại lực", "B. ngược pha ngoại lực", "C. cùng pha ngoại lực", "D. lệch pha $\\pi/4$"], correct: 2, explain: "Khi cộng hưởng, dao động cưỡng bức cùng pha ngoại lực." },
+        { id: 7, level: "⭐⭐ Thông hiểu", q: "7. Biên độ dao động cưỡng bức KHÔNG phụ thuộc vào:", options: ["A. biên độ ngoại lực", "B. lực cản môi trường", "C. pha ban đầu ngoại lực", "D. độ chênh lệch tần số"], correct: 2, explain: "Không phụ thuộc pha ban đầu ngoại lực." },
+        { id: 8, level: "⭐⭐ Thông hiểu", q: "8. Nếu lực cản môi trường rất lớn thì hiện tượng cộng hưởng sẽ:", options: ["A. cực kỳ lớn", "B. không rõ nét, đỉnh thấp và bè rộng", "C. xảy ra ngay lập tức", "D. thay đổi tần số riêng"], correct: 1, explain: "Ma sát lớn làm đỉnh cộng hưởng thấp và bè rộng." },
+        { id: 9, level: "⭐⭐ Thông hiểu", q: "9. Tần số riêng $f_0 = 5\\text{ Hz}$, ngoại lực biến thiên $5\\text{ Hz}$ tác dụng thì hệ:", options: ["A. tắt dần", "B. cộng hưởng", "C. triệt tiêu dao động", "D. giảm biên độ"], correct: 1, explain: "$f = f_0$ nên xảy ra cộng hưởng." },
+        { id: 10, level: "⭐⭐ Thông hiểu", q: "10. Khi tần số ngoại lực rất lớn so với tần số riêng ($\\Omega \\gg \\omega_0$), biên độ cưỡng bức:", options: ["A. rất lớn", "B. bằng 0", "C. rất nhỏ gần bằng 0", "D. bằng biên độ ngoại lực"], correct: 2, explain: "Tần số rất lớn làm biên độ giảm rất nhỏ gần bằng 0." },
+        { id: 11, level: "⭐⭐⭐ Vận dụng cao", q: "11. Mạch chọn sóng trong máy thu thanh dựa trên hiện tượng:", options: ["A. cảm ứng điện từ", "B. cộng hưởng điện từ", "C. tự cảm", "D. khúc xạ"], correct: 1, explain: "Dựa trên hiện tượng cộng hưởng điện từ." },
+        { id: 12, level: "⭐⭐⭐ Vận dụng cao", q: "12. Đồ thị biểu diễn biên độ cưỡng bức theo tần số ngoại lực gọi là:", options: ["A. đặc trưng Volt - Ampe", "B. đường cong cộng hưởng", "C. sơ đồ khối", "D. hình sin"], correct: 1, explain: "Đó là đường cong cộng hưởng." },
+        { id: 13, level: "⭐⭐⭐ Vận dụng cao", q: "13. Sau giai đoạn quá độ, hệ chịu ngoại lực tuần hoàn sẽ dao động ổn định với tần số bằng:", options: ["A. tần số riêng", "B. tần số ngoại lực", "C. tổng tần số", "D. hiệu tần số"], correct: 1, explain: "Dao động ổn định với tần số của ngoại lực." },
+        { id: 14, level: "⭐⭐⭐ Vận dụng cao", q: "14. Khi cộng hưởng, năng lượng hệ hấp thụ từ ngoại lực đạt:", options: ["A. cực đại", "B. cực tiểu", "C. bằng 0", "D. trung bình"], correct: 0, explain: "Hệ hấp thụ năng lượng lớn nhất khi cộng hưởng." },
+        { id: 15, level: "⭐⭐⭐ Vận dụng cao", q: "15. Khi thiết kế chi tiết máy trên ô tô, kỹ sư cần chú ý điều gì về cộng hưởng?", options: ["A. trùng khít tần số máy", "B. tránh để tần số riêng trùng tần số động cơ khi chạy thường", "C. không cần quan tâm", "D. làm chi tiết nặng gấp đôi"], correct: 1, explain: "Phải tránh trùng tần số để các chi tiết không bị rung gãy." }
+    ]
+};
+
+// Nội dung lý thuyết cho từng thí nghiệm
+const labTheoryData = {
+    spring: `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📌 Định nghĩa & Cấu tạo</h4>
+                <p class="text-xs">Con lắc lò xo gồm vật nặng khối lượng $m$ gắn vào lò xo độ cứng $k$. Khi kéo vật khỏi vị trí cân bằng và thả nhẹ, hệ dao động điều hòa quanh vị trí cân bằng.</p>
+            </div>
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📐 Công thức trọng tâm</h4>
+                <ul class="list-disc list-inside text-xs space-y-1">
+                    <li>Tần số góc: $\\omega = \\sqrt{\\frac{k}{m}}$</li>
+                    <li>Chu kỳ: $T = 2\\pi\\sqrt{\\frac{m}{k}}$</li>
+                    <li>Cơ năng: $W = \\frac{1}{2}kA^2 = \\frac{1}{2}m\\omega^2 A^2$</li>
+                </ul>
+            </div>
+        </div>
+    `,
+    pendulum: `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📌 Định nghĩa & Cấu tạo</h4>
+                <p class="text-xs">Con lắc đơn gồm vật nặng khối lượng $m$ treo vào đầu sợi dây mảnh dài $l$, dao động trong mặt phẳng thẳng đứng dưới tác dụng của trọng lực.</p>
+            </div>
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📐 Công thức trọng tâm</h4>
+                <ul class="list-disc list-inside text-xs space-y-1">
+                    <li>Tần số góc: $\\omega = \\sqrt{\\frac{g}{l}}$</li>
+                    <li>Chu kỳ: $T = 2\\pi\\sqrt{\\frac{l}{g}}$</li>
+                    <li>Cơ năng: $W = \\frac{1}{2}mgl\\alpha_0^2$</li>
+                </ul>
+            </div>
+        </div>
+    `,
+    damped: `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📌 Bản chất dao động tắt dần</h4>
+                <p class="text-xs">Biên độ giảm dần theo thời gian do lực cản và ma sát. Cơ năng chuyển hóa thành nhiệt năng.</p>
+            </div>
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📐 Công thức trọng tâm</h4>
+                <ul class="list-disc list-inside text-xs space-y-1">
+                    <li>Biên độ theo thời gian: $A(t) = A_0 e^{-\\gamma t}$</li>
+                    <li>Độ giảm biên độ sau mỗi chu kỳ: $\\Delta A = \\frac{4\\mu mg}{k}$</li>
+                </ul>
+            </div>
+        </div>
+    `,
+    forced: `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📌 Hiện tượng cộng hưởng</h4>
+                <p class="text-xs">Xảy ra khi tần số ngoại lực bằng tần số riêng ($\\Omega = \\omega_0$). Lúc này biên độ dao động cưỡng bức đạt cực đại.</p>
+            </div>
+            <div class="p-4 bg-slate-950/60 rounded-xl border border-cyan-500/20 space-y-2">
+                <h4 class="font-bold text-cyan-400">📐 Công thức trọng tâm</h4>
+                <ul class="list-disc list-inside text-xs space-y-1">
+                    <li>Tần số cưỡng bức: $f = f_{\\text{ngoại lực}}$</li>
+                    <li>Điều kiện cộng hưởng: $\\Omega = \\omega_0$</li>
+                </ul>
+            </div>
+        </div>
+    `
+};
+
+    </script>
+
+    <!-- MODULE: AUTH (js/auth.js) -->
+    <script id="module-auth">
+// ================= MODULE: ĐĂNG NHẬP / ĐĂNG KÝ & PHÂN QUYỀN (AUTH) =================
+
+function showToastMessage(message, type = 'success') {
+    let toast = document.getElementById('appToastBanner');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'appToastBanner';
+        toast.className = 'fixed top-5 right-5 z-[100] px-5 py-3 rounded-2xl font-extrabold text-xs shadow-2xl border transition-all duration-300';
+        document.body.appendChild(toast);
+    }
+    if (type === 'error') {
+        toast.className = 'fixed top-5 right-5 z-[100] px-5 py-3 rounded-2xl font-extrabold text-xs shadow-2xl border bg-rose-950 text-rose-200 border-rose-500';
+    } else {
+        toast.className = 'fixed top-5 right-5 z-[100] px-5 py-3 rounded-2xl font-extrabold text-xs shadow-2xl border bg-emerald-950 text-emerald-200 border-emerald-400';
+    }
+    toast.innerText = message;
+    toast.classList.remove('hidden');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3500);
+}
+
+function openAuthModal(mode) {
+    authMode = mode;
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.remove('hidden');
+
+    const titleEl = document.getElementById('authModalTitle');
+    if (titleEl) titleEl.innerText = mode === 'login' ? "Đăng nhập tài khoản" : "Đăng ký tài khoản mới";
+
+    const submitBtn = document.getElementById('authSubmitBtn');
+    if (submitBtn) submitBtn.innerText = mode === 'login' ? "Đăng nhập ngay 🚀" : "Đăng ký tài khoản ✨";
+
+    const regBox = document.getElementById('registerNameBox');
+    if (regBox) {
+        if (mode === 'register') {
+            regBox.classList.remove('hidden');
+            regBox.style.display = 'block';
+        } else {
+            regBox.classList.add('hidden');
+            regBox.style.display = 'none';
+        }
+    }
+    updateAuthFieldsVisibility();
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function setAuthRole(role) {
+    authRole = role;
+    const btnStudent = document.getElementById('authRoleStudent');
+    const btnTeacher = document.getElementById('authRoleTeacher');
+    if (btnStudent) {
+        btnStudent.className = role === 'student'
+            ? "p-3 rounded-xl font-bold bg-cyan-600 text-white text-xs border border-cyan-400 shadow"
+            : "p-3 rounded-xl font-bold bg-slate-800 text-slate-300 text-xs border border-transparent hover:bg-slate-700";
+    }
+    if (btnTeacher) {
+        btnTeacher.className = role === 'teacher'
+            ? "p-3 rounded-xl font-bold bg-amber-600 text-white text-xs border border-amber-400 shadow"
+            : "p-3 rounded-xl font-bold bg-slate-800 text-slate-300 text-xs border border-transparent hover:bg-slate-700";
+    }
+    const userInp = document.getElementById('authUserInput');
+    if (userInp) userInp.value = role === 'student' ? "hocsinh01" : "giaovien01";
+    updateAuthFieldsVisibility();
+}
+
+function updateAuthFieldsVisibility() {
+    const classField = document.getElementById('classCodeFieldContainer');
+    if (!classField) return;
+    if (authRole === 'teacher') {
+        classField.style.display = 'none';
+    } else {
+        classField.style.display = 'block';
+    }
+}
+
+function processAuth() {
+    const userInp = document.getElementById('authUserInput');
+    const user = userInp ? userInp.value.trim() : '';
+    if (!user) {
+        showToastMessage("⚠️ Vui lòng nhập Tên đăng nhập / Email!", "error");
+        return;
+    }
+    if (authMode === 'register') {
+        const fullName = document.getElementById('authFullNameInput').value.trim();
+        if (!fullName) {
+            showToastMessage("⚠️ Vui lòng điền Họ và tên!", "error");
+            return;
+        }
+        if (authRole === 'student') {
+            const classCode = document.getElementById('authClassCodeInput').value.trim();
+            if (!classCode) {
+                showToastMessage("⚠️ Vui lòng điền Mã lớp cho học sinh!", "error");
+                return;
+            }
+        }
+    }
+
+    loggedInUser = { name: user, role: authRole };
+    closeAuthModal();
+
+    const badge = document.getElementById('userStatusBadge');
+    const authBtns = document.getElementById('authButtonsGroup');
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (authBtns) authBtns.classList.add('hidden');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+
+    if (authRole === 'teacher') {
+        document.getElementById('protectedNavStudent').classList.add('hidden');
+        document.getElementById('protectedNavTeacher').classList.remove('hidden');
+        if (badge) badge.innerText = `👨‍🏫 GV: ${user}`;
+        renderTeacherManagementUI();
+        switchMainTab('teacher');
+    } else {
+        document.getElementById('protectedNavTeacher').classList.add('hidden');
+        document.getElementById('protectedNavStudent').classList.remove('hidden');
+        if (badge) badge.innerText = `🎓 HS: ${user}`;
+        // Chuyển thẳng sang Lộ trình học tập hoặc giữ ở trang chủ nhưng ẩn nút nhắc đăng nhập
+        const homeLoginBtn = document.getElementById('heroLoginBtnContainer');
+        if (homeLoginBtn) {
+            homeLoginBtn.innerHTML = `
+                <button onclick="switchMainTab('roadmap')" class="px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold rounded-2xl shadow-xl transition text-sm">🗺️ Vào Lộ trình học tập</button>
+                <button onclick="switchMainTab('lab')" class="px-6 py-3.5 bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-extrabold rounded-2xl shadow-xl transition text-sm">🧪 Mở Thí nghiệm ảo</button>
+                <button onclick="switchMainTab('practice')" class="px-6 py-3.5 bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 font-extrabold rounded-2xl shadow-xl transition text-sm">📝 Làm Kho 20 Đề</button>
+            `;
+        }
+        switchMainTab('home');
+    }
+    showToastMessage(authMode === 'login' ? `🎉 Đăng nhập thành công! Xin chào ${user}` : `🎉 Đăng ký tài khoản thành công! Xin chào ${user}`, 'success');
+}
+
+function handleLogout() {
+    loggedInUser = null;
+    document.getElementById('protectedNavStudent').classList.add('hidden');
+    document.getElementById('protectedNavTeacher').classList.add('hidden');
+    document.getElementById('authButtonsGroup').classList.remove('hidden');
+    document.getElementById('logoutBtn').classList.add('hidden');
+    document.getElementById('userStatusBadge').innerText = "Chưa đăng nhập";
+    const homeLoginBtn = document.getElementById('heroLoginBtnContainer');
+    if (homeLoginBtn) {
+        homeLoginBtn.innerHTML = `
+            <button onclick="openAuthModal('login')" class="px-7 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold rounded-2xl shadow-xl transition text-sm">🔑 Đăng nhập ngay để bắt đầu</button>
+        `;
+    }
+    switchMainTab('home');
+    showToastMessage("👋 Đã đăng xuất khỏi hệ thống!", "success");
+}
+
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
+window.setAuthRole = setAuthRole;
+window.processAuth = processAuth;
+window.handleLogout = handleLogout;
+
+    </script>
+
+    <!-- MODULE: NAVIGATION (js/navigation.js) -->
+    <script id="module-navigation">
+// ================= MODULE: ĐIỀU HƯỚNG TAB CHÍNH (NAVIGATION) =================
+
+function switchMainTab(tab) {
+    if (!loggedInUser && tab !== 'home') {
+        alert("Vui lòng đăng nhập để sử dụng tính năng này!");
+        openAuthModal('login');
+        return;
+    }
+
+    ['home', 'roadmap', 'lab', 'practice', 'teacher'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.classList.add('hidden');
+    });
+
+    const targetTab = document.getElementById('tab-' + tab);
+    if (targetTab) targetTab.classList.remove('hidden');
+
+    let navIds = authRole === 'teacher'
+        ? ['nav-home-t', 'nav-roadmap-t', 'nav-lab-t', 'nav-practice-t', 'nav-teacher']
+        : ['nav-home', 'nav-roadmap', 'nav-lab', 'nav-practice'];
+
+    navIds.forEach(id => {
+        let btn = document.getElementById(id);
+        if (btn) {
+            if (id === 'nav-teacher') {
+                btn.className = "px-4 py-2 rounded-xl font-bold text-xs bg-amber-600 text-white hover:bg-amber-500 transition";
+            } else {
+                btn.className = "px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+            }
+        }
+    });
+
+    let currentActiveBtn = document.getElementById(authRole === 'teacher' ? (tab === 'teacher' ? 'nav-teacher' : 'nav-' + tab + '-t') : 'nav-' + tab);
+    if (currentActiveBtn) {
+        currentActiveBtn.className = "px-4 py-2 rounded-xl font-bold text-xs nav-active transition";
+    }
+
+    if (tab === 'lab') {
+        switchLabExp(currentLab);
+        startLabAnimation();
+    }
+    if (tab === 'practice') renderPracticeView();
+    if (tab === 'teacher') renderTeacherManagementUI();
+}
+
+    </script>
+
+    <!-- MODULE: LAB (js/lab.js) -->
+    <script id="module-lab">
+// ================= MODULE: THÍ NGHIỆM ẢO & LÝ THUYẾT (LAB) =================
+
+let labChart = null;
+let animFrameId = null;
+
+function initLabChart() {
+    const ctx = document.getElementById('graphCanvas');
+    if (!ctx || labChart) return;
+
+    labChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Li độ x (cm)',
+                    data: [],
+                    borderColor: '#22d3ee',
+                    backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.35
+                },
+                {
+                    label: 'Vận tốc v/ω (cm)',
+                    data: [],
+                    borderColor: '#f472b6',
+                    backgroundColor: 'rgba(244, 114, 182, 0.08)',
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    tension: 0.35
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+                x: {
+                    ticks: { color: '#94a3b8', maxTicksLimit: 6 },
+                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                },
+                y: {
+                    min: -100,
+                    max: 100,
+                    ticks: { color: '#94a3b8' },
+                    grid: { color: 'rgba(148, 163, 184, 0.15)' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#e2e8f0', font: { size: 11 } }
+                }
+            }
+        }
+    });
+}
+
+function updateLabParams() {
+    paramA = parseFloat(document.getElementById('rangeA').value);
+    paramW = parseFloat(document.getElementById('rangeW').value);
+    paramPhi = parseFloat(document.getElementById('rangePhi').value);
+    paramSpeed = parseFloat(document.getElementById('rangeSpeed').value);
+
+    document.getElementById('valA').innerText = paramA;
+    document.getElementById('valW').innerText = paramW.toFixed(1);
+    document.getElementById('valPhi').innerText = paramPhi.toFixed(1);
+    document.getElementById('valSpeed').innerText = paramSpeed.toFixed(1) + 'x';
+}
+
+function resetSimulation() {
+    simTime = 0;
+    if (labChart) {
+        labChart.data.labels = [];
+        labChart.data.datasets[0].data = [];
+        labChart.data.datasets[1].data = [];
+        labChart.update();
+    }
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pauseBtn').innerText = isPaused ? "▶ Tiếp tục" : "⏸ Tạm dừng";
+}
+
+function switchLabExp(exp) {
+    currentLab = exp;
+    ['spring', 'pendulum', 'damped', 'forced'].forEach(k => {
+        const b = document.getElementById('lab-btn-' + k);
+        if (b) {
+            b.className = k === exp
+                ? "px-4 py-2 rounded-xl font-bold text-xs bg-cyan-600 text-white shadow transition"
+                : "px-4 py-2 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+        }
+    });
+    document.getElementById('labSimTitle').innerHTML = `🧪 Thí nghiệm: ${
+        exp === 'spring' ? 'Con lắc lò xo' : (exp === 'pendulum' ? 'Con lắc đơn' : (exp === 'damped' ? 'Dao động tắt dần' : 'Dao động cưỡng bức & Cộng hưởng'))
+    }`;
+    document.getElementById('labTheoryBody').innerHTML = labTheoryData[exp];
+    resetSimulation();
+    renderLabExercises(exp);
+    if (window.MathJax) MathJax.typesetPromise();
+}
+
+function computeLabState(t) {
+    let x = 0;
+    let vScaled = 0;
+    let ampCurrent = paramA;
+
+    if (currentLab === 'spring' || currentLab === 'pendulum') {
+        x = paramA * Math.cos(paramW * t + paramPhi);
+        vScaled = -paramA * Math.sin(paramW * t + paramPhi);
+    } else if (currentLab === 'damped') {
+        const gamma = 0.25;
+        ampCurrent = paramA * Math.exp(-gamma * t);
+        x = ampCurrent * Math.cos(paramW * t + paramPhi);
+        vScaled = -ampCurrent * Math.sin(paramW * t + paramPhi);
+    } else if (currentLab === 'forced') {
+        // Tần số riêng cố định w0 = 6.0 rad/s để dễ quan sát cộng hưởng khi chỉnh w gần 6.0
+        const w0 = 6.0;
+        const gamma = 0.6;
+        const resonanceFactor = 1 / Math.sqrt(Math.pow(w0 * w0 - paramW * paramW, 2) + 4 * gamma * gamma * paramW * paramW);
+        ampCurrent = Math.min(95, paramA * resonanceFactor * 12);
+        x = ampCurrent * Math.cos(paramW * t + paramPhi);
+        vScaled = -ampCurrent * Math.sin(paramW * t + paramPhi);
+    }
+
+    return { x, vScaled, ampCurrent };
+}
+
+function drawSimulationCanvas(state) {
+    const canvas = document.getElementById('simCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Lưới nền mờ
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < W; gx += 35) {
+        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+    }
+    for (let gy = 0; gy < H; gy += 35) {
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+    }
+
+    const centerX = W / 2;
+    const centerY = H / 2 + 10;
+    const scalePx = 1.8; // 1 cm -> 1.8 px
+
+    if (currentLab === 'pendulum') {
+        // Vẽ con lắc đơn
+        const pivotX = centerX;
+        const pivotY = 28;
+        const ropeLen = 175;
+        const maxAngle = (paramA / 90) * 0.65;
+        const angle = (state.x / paramA) * maxAngle;
+
+        const bobX = pivotX + ropeLen * Math.sin(angle);
+        const bobY = pivotY + ropeLen * Math.cos(angle);
+
+        // Giá đỡ
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(pivotX - 60, pivotY);
+        ctx.lineTo(pivotX + 60, pivotY);
+        ctx.stroke();
+
+        // Đường thẳng đứng cân bằng
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(pivotX, pivotY);
+        ctx.lineTo(pivotX, pivotY + ropeLen + 25);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Dây treo
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(pivotX, pivotY);
+        ctx.lineTo(bobX, bobY);
+        ctx.stroke();
+
+        // Quả nặng
+        const grad = ctx.createRadialGradient(bobX - 5, bobY - 5, 3, bobX, bobY, 20);
+        grad.addColorStop(0, '#67e8f9');
+        grad.addColorStop(1, '#0284c7');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(bobX, bobY, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    } else {
+        // Vẽ hệ lò xo nằm ngang (cho spring, damped, forced)
+        const wallX = 70;
+        const groundY = centerY + 26;
+        const eqX = centerX + 20;
+        const massX = eqX + state.x * scalePx;
+
+        // Mặt sàn và tường
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(wallX, centerY - 55);
+        ctx.lineTo(wallX, groundY);
+        ctx.lineTo(W - 40, groundY);
+        ctx.stroke();
+
+        // Vạch vị trí cân bằng O và biên -A, +A
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(eqX, centerY - 55);
+        ctx.lineTo(eqX, groundY + 15);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 12px Plus Jakarta Sans';
+        ctx.fillText('VTCB (O)', eqX - 24, groundY + 28);
+
+        // Vẽ lò xo
+        const coils = 16;
+        const springStartX = wallX;
+        const springEndX = massX - 26;
+        const springLen = springEndX - springStartX;
+
+        ctx.strokeStyle = currentLab === 'damped' ? '#fbbf24' : (currentLab === 'forced' ? '#f472b6' : '#38bdf8');
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(springStartX, centerY);
+        for (let i = 1; i <= coils; i++) {
+            const xPos = springStartX + (springLen / (coils + 1)) * i;
+            const yOffset = (i % 2 === 0) ? -14 : 14;
+            ctx.lineTo(xPos, centerY + yOffset);
+        }
+        ctx.lineTo(springEndX, centerY);
+        ctx.stroke();
+
+        // Vẽ vật nặng
+        ctx.fillStyle = currentLab === 'damped' ? '#d97706' : (currentLab === 'forced' ? '#db2777' : '#0284c7');
+        ctx.beginPath();
+        ctx.roundRect(massX - 26, centerY - 24, 52, 48, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px Plus Jakarta Sans';
+        ctx.fillText('m', massX - 6, centerY + 4);
+    }
+
+    // Thông số hiển thị góc trên canvas
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 12px Plus Jakarta Sans';
+    ctx.fillText(`t = ${simTime.toFixed(2)} s   |   x = ${state.x.toFixed(1)} cm`, 18, 24);
+    if (currentLab === 'forced') {
+        ctx.fillStyle = Math.abs(paramW - 6.0) <= 0.5 ? '#4ade80' : '#f472b6';
+        ctx.fillText(`Tần số riêng ω₀ = 6.0 rad/s ${Math.abs(paramW - 6.0) <= 0.5 ? '⚡ ĐANG CỘNG HƯỞNG CỰC ĐẠI!' : ''}`, 18, 44);
+    } else if (currentLab === 'damped') {
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(`Biên độ hiện tại A(t) = ${state.ampCurrent.toFixed(1)} cm`, 18, 44);
+    }
+}
+
+function startLabAnimation() {
+    initLabChart();
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+
+    let lastTimestamp = performance.now();
+    let chartStepCounter = 0;
+
+    function step(now) {
+        const dt = (now - lastTimestamp) / 1000;
+        lastTimestamp = now;
+
+        const labTab = document.getElementById('tab-lab');
+        const isLabVisible = labTab && !labTab.classList.contains('hidden');
+
+        if (isLabVisible && !isPaused) {
+            simTime += dt * paramSpeed;
+            const state = computeLabState(simTime);
+            drawSimulationCanvas(state);
+
+            chartStepCounter++;
+            if (labChart && chartStepCounter % 2 === 0) {
+                labChart.data.labels.push(simTime.toFixed(1) + 's');
+                labChart.data.datasets[0].data.push(state.x);
+                labChart.data.datasets[1].data.push(state.vScaled);
+
+                if (labChart.data.labels.length > 80) {
+                    labChart.data.labels.shift();
+                    labChart.data.datasets[0].data.shift();
+                    labChart.data.datasets[1].data.shift();
+                }
+                labChart.update('none');
+            }
+        } else if (isLabVisible && isPaused) {
+            const state = computeLabState(simTime);
+            drawSimulationCanvas(state);
+        }
+
+        animFrameId = requestAnimationFrame(step);
+    }
+
+    animFrameId = requestAnimationFrame(step);
+}
+
+// Bài tập 15 câu tại chỗ dưới mỗi thí nghiệm
+function renderLabExercises(exp) {
+    let container = document.getElementById('labExerciseContainer');
+    if (!container) return;
+    let questions = labExercisesData[exp];
+    let choices = labUserChoices[exp] || {};
+    let submitted = labSubmitted[exp] || false;
+    let html = "";
+
+    questions.forEach((q, idx) => {
+        let sel = choices[idx];
+        html += `
+            <div class="p-4 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-semibold text-amber-400 bg-slate-800 px-2.5 py-1 rounded">${q.level}</span>
+                </div>
+                <p class="font-bold text-white text-xs">${q.q}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+        `;
+        q.options.forEach((opt, optIdx) => {
+            let st = "bg-slate-800 text-slate-300 border-slate-700";
+            if (sel === optIdx) st = "bg-cyan-700 text-white border-cyan-400 font-bold";
+            if (submitted) {
+                if (optIdx === q.correct) st = "bg-emerald-700 text-white border-emerald-500 font-bold";
+                else if (sel === optIdx) st = "bg-rose-700 text-white border-rose-500 font-bold";
+            }
+            html += `<button onclick="selectLabChoice('${exp}', ${idx}, ${optIdx})" class="p-2.5 text-left text-xs rounded-xl border ${st} transition">${opt}</button>`;
+        });
+        html += `</div>`;
+        if (submitted) {
+            html += `<div class="mt-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-emerald-400">💡 <b>Lời giải:</b> ${q.explain}</div>`;
+        }
+        html += `</div>`;
+    });
+
+    html += `<button onclick="submitLabQuiz('${exp}')" class="mt-3 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow transition">🚀 Chấm điểm bộ 15 câu tại chỗ</button>`;
+    container.innerHTML = html;
+    if (window.MathJax) MathJax.typesetPromise();
+}
+
+function selectLabChoice(exp, qIdx, optIdx) {
+    if (labSubmitted[exp]) return;
+    if (!labUserChoices[exp]) labUserChoices[exp] = {};
+    labUserChoices[exp][qIdx] = optIdx;
+    renderLabExercises(exp);
+}
+
+function submitLabQuiz(exp) {
+    labSubmitted[exp] = true;
+    renderLabExercises(exp);
+}
+
+    </script>
+
+    <!-- MODULE: PRACTICE (js/practice.js) -->
+    <script id="module-practice">
+// ================= MODULE: BÀI TẬP & TỰ LUYỆN (PRACTICE) =================
+
+function switchPracticeSub(mode) {
+    practiceSubMode = mode;
+    selectedSelfLevel = null;
+    activeSelfExamId = null;
+    activeTeacherExamId = null;
+    document.getElementById('subBtnTeacher').className = mode === 'teacher'
+        ? "px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 text-white shadow transition"
+        : "px-5 py-2.5 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+    document.getElementById('subBtnSelf').className = mode === 'self'
+        ? "px-5 py-2.5 rounded-xl font-bold text-xs bg-cyan-600 text-white shadow transition"
+        : "px-5 py-2.5 rounded-xl font-bold text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+    renderPracticeView();
+}
+
+// Tính toán thống kê tiến độ và lỗi sai cho một mức độ (hoặc toàn bộ nếu level = null)
+function getSelfPracticeStats(level = null) {
+    const levelsToCheck = level ? [level] : ['easy', 'medium', 'hard'];
+    let currentSetTotal = 0;
+    let currentSetCompleted = 0;
+
+    levelsToCheck.forEach(lvl => {
+        const exams = selfPracticeExams[lvl] || [];
+        currentSetTotal += exams.length;
+        exams.forEach(ex => {
+            if (studentExamSubmitted[ex.id]) {
+                currentSetCompleted++;
+            }
+        });
+    });
+
+    // Lấy danh sách kết quả đã nộp thuộc phạm vi lọc
+    const allResults = Object.values(studentExamResults).filter(r => !level || r.level === level);
+    allResults.sort((a, b) => b.timestamp - a.timestamp);
+
+    let totalScoreSum = 0;
+    allResults.forEach(r => { totalScoreSum += parseFloat(r.score); });
+    const avgScore = allResults.length > 0 ? (totalScoreSum / allResults.length).toFixed(2) : null;
+
+    // Thống kê kiến thức hay sai
+    const topicStats = {};
+    Object.keys(KNOWLEDGE_TOPICS).forEach(tKey => {
+        topicStats[tKey] = {
+            ...KNOWLEDGE_TOPICS[tKey],
+            wrongCount: 0,
+            totalEncountered: 0,
+            failedExams: new Set()
+        };
+    });
+
+    allResults.forEach(res => {
+        if (res.topicBreakdown) {
+            Object.keys(res.topicBreakdown).forEach(tKey => {
+                if (topicStats[tKey]) {
+                    topicStats[tKey].wrongCount += res.topicBreakdown[tKey].wrong;
+                    topicStats[tKey].totalEncountered += res.topicBreakdown[tKey].total;
+                    if (res.topicBreakdown[tKey].wrong > 0) {
+                        topicStats[tKey].failedExams.add(`Đề ${res.examNum} (Đợt #${res.batchNum})`);
+                    }
+                }
+            });
+        }
+    });
+
+    const weakTopics = Object.values(topicStats)
+        .filter(t => t.wrongCount > 0)
+        .map(t => ({
+            ...t,
+            wrongRate: t.totalEncountered > 0 ? Math.round((t.wrongCount / t.totalEncountered) * 100) : 0,
+            failedExamsList: Array.from(t.failedExams)
+        }))
+        .sort((a, b) => b.wrongCount - a.wrongCount || b.wrongRate - a.wrongRate);
+
+    const progressPercent = currentSetTotal > 0 ? Math.round((currentSetCompleted / currentSetTotal) * 100) : 0;
+
+    return {
+        currentSetTotal,
+        currentSetCompleted,
+        progressPercent,
+        allResults,
+        avgScore,
+        weakTopics
+    };
+}
+
+// Điều hướng sang đúng bài thí nghiệm & lý thuyết để học sinh ôn lại kiến thức bị hổng
+function reviewWeakTopicInLab(labExp) {
+    switchMainTab('lab');
+    switchLabExp(labExp);
+    const theoryEl = document.getElementById('labTheoryTitle');
+    if (theoryEl) {
+        theoryEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// Render khối Bảng Tiến Độ, Thống Kê Điểm Từng Đề & Kiến Thức Hay Sai
+function renderSelfAnalyticsDashboard(level = null) {
+    const stats = getSelfPracticeStats(level);
+    const levelLabel = !level
+        ? 'Tất cả mức độ (60 đề hiện hành)'
+        : (level === 'easy' ? 'Mức độ Dễ' : (level === 'medium' ? 'Mức độ Trung bình' : 'Mức độ Nâng cao'));
+    const currentBatch = level ? selfExamBatch[level] : null;
+
+    let html = `
+        <div class="p-5 bg-slate-950/90 rounded-2xl border border-cyan-500/40 space-y-5 shadow-xl">
+            <!-- Header & Thanh tiến độ -->
+            <div class="space-y-3">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-2">
+                    <div>
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700">
+                            📊 Theo dõi tiến độ ${currentBatch ? `• Bộ đề Đợt #${currentBatch}` : ''}
+                        </span>
+                        <h4 class="text-base font-extrabold text-white mt-1.5">
+                            Tiến độ hoàn thành (${levelLabel}): <span class="text-cyan-400">${stats.currentSetCompleted} / ${stats.currentSetTotal} đề</span> (${stats.progressPercent}%)
+                        </h4>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        ${stats.avgScore !== null ? `
+                            <div class="px-3.5 py-1.5 bg-emerald-950/90 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300">
+                                ⭐ Điểm TB: <span class="text-white text-sm">${stats.avgScore}</span> / 10
+                            </div>
+                        ` : ''}
+                        ${level && stats.currentSetCompleted < 20 ? `
+                            <button onclick="simulateCompleteAll20Exams('${level}')" class="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 rounded-xl text-[11px] font-bold transition" title="Tự động giải và nộp cả 20 đề để kiểm tra nhanh thống kê & tính năng tạo bộ đề mới">
+                                ⚡ Làm nhanh 20/20 đề (Demo)
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Thanh Progress Bar -->
+                <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden border border-slate-700 p-0.5">
+                    <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 transition-all duration-500 flex items-center justify-end pr-2 text-[10px] font-black text-slate-950"
+                         style="width: ${Math.max(stats.progressPercent, stats.currentSetCompleted > 0 ? 6 : 0)}%">
+                        ${stats.progressPercent >= 10 ? `${stats.progressPercent}%` : ''}
+                    </div>
+                </div>
+            </div>
+    `;
+
+    // Hộp mở khóa tạo bộ 20 đề mới hoàn toàn khi đã hoàn thành đủ 20/20 đề của mức độ
+    if (level && stats.currentSetCompleted >= 20) {
+        html += `
+            <div class="p-4 bg-gradient-to-r from-amber-950/90 via-emerald-950/90 to-cyan-950/90 rounded-2xl border-2 border-amber-400/70 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">🏆</span>
+                        <h5 class="font-extrabold text-amber-300 text-sm md:text-base">
+                            Chúc mừng! Bạn đã hoàn thành trọn vẹn 20/20 đề của Đợt #${currentBatch}!
+                        </h5>
+                    </div>
+                    <p class="text-xs text-slate-200">
+                        Bạn có thể tạo ngay <b>1 bộ 20 đề mới hoàn toàn (Đợt #${currentBatch + 1})</b> với các câu hỏi mới và bộ thông số tính toán khác biệt hoàn toàn với các mã đề trước để tiếp tục rèn luyện.
+                    </p>
+                </div>
+                <button onclick="generateNewExamBatch('${level}')" class="px-5 py-3 bg-gradient-to-r from-amber-400 to-pink-500 hover:from-amber-300 hover:to-pink-400 text-slate-950 font-black rounded-xl text-xs shadow-xl transition shrink-0">
+                    ✨ Tạo Bộ 20 Đề Mới Hoàn Toàn (Đợt #${currentBatch + 1})
+                </button>
+            </div>
+        `;
+    }
+
+    // Khu vực 2 cột: (1) Bảng điểm từng đề đã làm & (2) Thống kê những kiến thức hay sai cần ôn lại
+    html += `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
+            <!-- Cột 1: Thống kê điểm số ở mỗi đề -->
+            <div class="p-4 bg-slate-900/90 rounded-xl border border-slate-800 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h5 class="font-extrabold text-cyan-300 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        📋 Thống kê điểm số từng đề đã làm (${stats.allResults.length} đề)
+                    </h5>
+                </div>
+                ${stats.allResults.length === 0 ? `
+                    <p class="text-xs text-slate-400 italic py-4 text-center">
+                        Chưa có đề nào được nộp. Hãy chọn một đề bên dưới và hoàn thành để xem thống kê điểm số chi tiết!
+                    </p>
+                ` : `
+                    <div class="max-h-56 overflow-y-auto pr-1 custom-scroll space-y-2">
+                        ${stats.allResults.map(r => {
+                            const scoreNum = parseFloat(r.score);
+                            const badgeColor = scoreNum >= 8.0
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+                                : (scoreNum >= 5.0 ? 'bg-amber-950 text-amber-300 border-amber-500/40' : 'bg-rose-950 text-rose-300 border-rose-500/40');
+                            return `
+                                <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
+                                    <div>
+                                        <div class="font-bold text-white text-xs">
+                                            Đề số ${r.examNum} <span class="text-slate-400 font-normal">(Đợt #${r.batchNum} • ${r.level === 'easy' ? 'Dễ' : (r.level === 'medium' ? 'TB' : 'Nâng cao')})</span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-400 mt-0.5">
+                                            Đúng ${r.correctCount}/${r.totalQ} câu • Nộp lúc ${r.submittedAt}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2.5 py-1 rounded-lg border text-xs font-extrabold ${badgeColor}">
+                                            ${r.score} điểm
+                                        </span>
+                                        ${r.batchNum === selfExamBatch[r.level] ? `
+                                            <button onclick="selectSelfLevel('${r.level}'); startSelfExam('${r.examId}');" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-[10px] font-bold">
+                                                Xem lại
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            </div>
+
+            <!-- Cột 2: Thống kê những kiến thức hay sai để học sinh ôn lại -->
+            <div class="p-4 bg-slate-900/90 rounded-xl border border-rose-500/30 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h5 class="font-extrabold text-rose-300 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        ⚠️ Kiến thức hay sai cần ôn lại (${stats.weakTopics.length} chủ đề)
+                    </h5>
+                </div>
+                ${stats.weakTopics.length === 0 ? `
+                    <p class="text-xs text-slate-400 italic py-4 text-center">
+                        ${stats.allResults.length === 0
+                            ? 'Hệ thống sẽ tự động phân tích những dạng bài và công thức bạn hay nhầm lẫn sau khi bạn nộp đề.'
+                            : '🎉 Tuyệt vời! Bạn chưa có câu trả lời sai nào trong các đề đã làm.'}
+                    </p>
+                ` : `
+                    <div class="max-h-56 overflow-y-auto pr-1 custom-scroll space-y-2.5">
+                        ${stats.weakTopics.map(t => `
+                            <div class="p-3 bg-slate-950 rounded-xl border border-rose-500/30 space-y-1.5">
+                                <div class="flex justify-between items-start gap-2">
+                                    <span class="font-bold text-rose-300 text-xs">❗ ${t.name}</span>
+                                    <span class="px-2 py-0.5 bg-rose-950 text-rose-300 border border-rose-700 rounded text-[10px] font-extrabold shrink-0">
+                                        Sai ${t.wrongCount}/${t.totalEncountered} câu (${t.wrongRate}%)
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-300">
+                                    📐 <b>Công thức cần nhớ:</b> ${t.formula}
+                                </p>
+                                <p class="text-[11px] text-amber-300/90">
+                                    💡 <b>Lưu ý:</b> ${t.advice}
+                                </p>
+                                <div class="flex justify-between items-center pt-1">
+                                    <span class="text-[10px] text-slate-400">Hay sai ở: ${t.failedExamsList.slice(0, 3).join(', ')}${t.failedExamsList.length > 3 ? '...' : ''}</span>
+                                    <button onclick="reviewWeakTopicInLab('${t.labExp}')" class="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 rounded-lg text-[10px] font-bold transition">
+                                        🧪 ${t.labLabel}
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            </div>
+        </div>
+        </div>
+    `;
+
+    return html;
+}
+
+// Sinh bộ 20 đề mới hoàn toàn cho mức độ đã hoàn thành đủ 20 đề
+function generateNewExamBatch(level) {
+    const stats = getSelfPracticeStats(level);
+    if (stats.currentSetCompleted < 20) {
+        alert(`⚠️ Bạn mới hoàn thành ${stats.currentSetCompleted}/20 đề! Vui lòng hoàn thành đủ 20 đề trước khi tạo bộ đề mới.`);
+        return;
+    }
+
+    selfExamBatch[level] = (selfExamBatch[level] || 1) + 1;
+    const newBatchNum = selfExamBatch[level];
+    selfPracticeExams[level] = buildSelfExamSetForLevel(level, newBatchNum);
+    activeSelfExamId = null;
+
+    const lvlLabel = level === 'easy' ? 'Dễ' : (level === 'medium' ? 'Trung bình' : 'Nâng cao');
+    alert(`🎉 Đã khởi tạo thành công Bộ 20 Đề Mới Hoàn Toàn (Đợt #${newBatchNum} - Mức độ ${lvlLabel})!\n\nToàn bộ 20 đề (600 câu hỏi) đã được làm mới với các dạng bài và số liệu tính toán khác hẳn các mã đề trước.`);
+    renderPracticeView();
+}
+
+// Hàm hỗ trợ giả lập hoàn thành cả 20 đề để kiểm thử nhanh thanh tiến độ 20/20, thống kê lỗi sai và nút tạo bộ đề mới
+function simulateCompleteAll20Exams(level) {
+    const exams = selfPracticeExams[level] || [];
+    exams.forEach((exam, exIdx) => {
+        if (!studentExamSubmitted[exam.id]) {
+            studentExamChoices[exam.id] = {};
+            exam.questions.forEach((q, qIdx) => {
+                // Giả lập học sinh làm đúng khoảng 75% - 90%, có một số câu sai để hiển thị thống kê kiến thức hay sai
+                const makeMistake = ((exIdx + qIdx) % 6 === 0);
+                studentExamChoices[exam.id][qIdx] = makeMistake ? ((q.correct + 1) % 4) : q.correct;
+            });
+            recordExamSubmission(exam);
+        }
+    });
+    renderPracticeView();
+}
+
+// Ghi nhận kết quả chấm điểm và thống kê kiến thức sai của 1 đề
+function recordExamSubmission(exam) {
+    const choices = studentExamChoices[exam.id] || {};
+    const totalQ = exam.questions.length;
+    let correct = 0;
+    const topicBreakdown = {};
+
+    exam.questions.forEach((q, i) => {
+        const tId = q.topicId || 'eq_phase';
+        if (!topicBreakdown[tId]) {
+            topicBreakdown[tId] = { total: 0, wrong: 0 };
+        }
+        topicBreakdown[tId].total++;
+
+        if (choices[i] === q.correct) {
+            correct++;
+        } else {
+            topicBreakdown[tId].wrong++;
+        }
+    });
+
+    studentExamSubmitted[exam.id] = true;
+    const score = (Math.round((correct / totalQ) * 10.0 * 10) / 10).toFixed(1);
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    studentExamResults[exam.id] = {
+        examId: exam.id,
+        examNum: exam.examNum || 1,
+        batchNum: exam.batchNum || selfExamBatch[exam.level] || 1,
+        level: exam.level || selectedSelfLevel,
+        title: exam.title,
+        score: score,
+        correctCount: correct,
+        totalQ: totalQ,
+        submittedAt: timeStr,
+        timestamp: Date.now() + (exam.examNum || 0),
+        topicBreakdown: topicBreakdown
+    };
+
+    return studentExamResults[exam.id];
+}
+
+function renderPracticeView() {
+    const content = document.getElementById('practiceContent');
+    const resultBox = document.getElementById('practiceResultBox');
+    const submitBtn = document.getElementById('submitPracticeBtn');
+    if (!content) return;
+    resultBox.classList.add('hidden');
+
+    if (practiceSubMode === 'teacher') {
+        document.getElementById('practiceHeading').innerText = "📋 Bài tập giáo viên giao";
+        if (!activeTeacherExamId) {
+            submitBtn.classList.add('hidden');
+            let html = `<div class="space-y-3"><h4 class="font-bold text-cyan-300 text-sm">📋 Danh sách bài tập do giáo viên phân công:</h4>`;
+            teacherAssignedExams.forEach(ex => {
+                html += `
+                    <div class="p-4 bg-slate-900 rounded-xl border border-slate-700 flex justify-between items-center shadow">
+                        <div>
+                            <h5 class="font-bold text-white text-sm">${ex.title}</h5>
+                            <p class="text-xs text-slate-400 mt-1">Ngày giao: ${ex.date} | ${ex.questions.length} câu</p>
+                        </div>
+                        <button onclick="startTeacherAssignedExam('${ex.id}')" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition shadow">✍️ Làm bài ngay</button>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            content.innerHTML = html;
+        } else {
+            submitBtn.classList.remove('hidden');
+            renderTeacherAssignedQuiz();
+        }
+    } else {
+        document.getElementById('practiceHeading').innerText = "🤖 Kho 20 Đề Tự Luyện Tập (30 Câu) & Thống Kê Tiến Độ";
+        if (!selectedSelfLevel) {
+            submitBtn.classList.add('hidden');
+            const easyStats = getSelfPracticeStats('easy');
+            const medStats = getSelfPracticeStats('medium');
+            const hardStats = getSelfPracticeStats('hard');
+
+            content.innerHTML = `
+                <div class="space-y-6">
+                    ${renderSelfAnalyticsDashboard(null)}
+
+                    <div class="space-y-3">
+                        <h4 class="font-bold text-cyan-300 text-base">🎯 Vui lòng chọn mức độ kho 20 đề tự luyện:</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Mức độ Dễ -->
+                            <div onclick="selectSelfLevel('easy')" class="p-6 bg-slate-900 rounded-2xl border border-emerald-500/40 cursor-pointer hover:border-emerald-400 transition space-y-3 text-center shadow-lg">
+                                <div class="text-3xl">🟢</div>
+                                <div>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700">Đợt đề #${selfExamBatch.easy}</span>
+                                    <h5 class="font-extrabold text-white text-lg mt-1">Mức độ Dễ</h5>
+                                    <p class="text-xs text-slate-400">Kho 20 đề nhận biết & công thức cơ bản</p>
+                                </div>
+                                <div class="space-y-1 pt-1">
+                                    <div class="flex justify-between text-[11px] font-bold text-emerald-300">
+                                        <span>Tiến độ: ${easyStats.currentSetCompleted}/20 đề</span>
+                                        <span>${easyStats.progressPercent}%</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="h-full bg-emerald-400" style="width: ${easyStats.progressPercent}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mức độ Trung bình -->
+                            <div onclick="selectSelfLevel('medium')" class="p-6 bg-slate-900 rounded-2xl border border-amber-500/40 cursor-pointer hover:border-amber-400 transition space-y-3 text-center shadow-lg">
+                                <div class="text-3xl">🟡</div>
+                                <div>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700">Đợt đề #${selfExamBatch.medium}</span>
+                                    <h5 class="font-extrabold text-white text-lg mt-1">Mức độ Trung bình</h5>
+                                    <p class="text-xs text-slate-400">Kho 20 đề thông hiểu & tính toán</p>
+                                </div>
+                                <div class="space-y-1 pt-1">
+                                    <div class="flex justify-between text-[11px] font-bold text-amber-300">
+                                        <span>Tiến độ: ${medStats.currentSetCompleted}/20 đề</span>
+                                        <span>${medStats.progressPercent}%</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="h-full bg-amber-400" style="width: ${medStats.progressPercent}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mức độ Nâng cao -->
+                            <div onclick="selectSelfLevel('hard')" class="p-6 bg-slate-900 rounded-2xl border border-rose-500/40 cursor-pointer hover:border-rose-400 transition space-y-3 text-center shadow-lg">
+                                <div class="text-3xl">🔴</div>
+                                <div>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700">Đợt đề #${selfExamBatch.hard}</span>
+                                    <h5 class="font-extrabold text-white text-lg mt-1">Mức độ Nâng cao</h5>
+                                    <p class="text-xs text-slate-400">Kho 20 đề vận dụng cao & cực trị</p>
+                                </div>
+                                <div class="space-y-1 pt-1">
+                                    <div class="flex justify-between text-[11px] font-bold text-rose-300">
+                                        <span>Tiến độ: ${hardStats.currentSetCompleted}/20 đề</span>
+                                        <span>${hardStats.progressPercent}%</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                        <div class="h-full bg-rose-400" style="width: ${hardStats.progressPercent}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (!activeSelfExamId) {
+            submitBtn.classList.add('hidden');
+            let levelName = selectedSelfLevel === 'easy' ? 'Dễ' : (selectedSelfLevel === 'medium' ? 'Trung bình' : 'Nâng cao');
+            let exams = selfPracticeExams[selectedSelfLevel];
+            let batchNum = selfExamBatch[selectedSelfLevel];
+
+            let html = `
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                    <button onclick="selectedSelfLevel=null; renderPracticeView();" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold shadow">
+                        ⬅ Quay lại chọn mức độ
+                    </button>
+                    <span class="text-xs font-bold text-cyan-300 bg-cyan-950 px-3 py-1.5 rounded-xl border border-cyan-700">
+                        📦 Đang hiển thị: Bộ 20 đề Đợt #${batchNum} (Mức độ ${levelName})
+                    </span>
+                </div>
+            `;
+
+            html += renderSelfAnalyticsDashboard(selectedSelfLevel);
+
+            html += `
+                <div class="space-y-3 mt-5">
+                    <h4 class="font-bold text-cyan-300 text-sm">📋 Danh sách 20 bộ đề - Mức độ ${levelName} (Đợt #${batchNum}):</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[550px] overflow-y-auto pr-2 custom-scroll">
+            `;
+            exams.forEach(ex => {
+                const isDone = studentExamSubmitted[ex.id];
+                const res = studentExamResults[ex.id];
+                const cardBorder = isDone ? 'border-emerald-500/50 bg-slate-900/95' : 'border-slate-700 bg-slate-900';
+                html += `
+                    <div class="p-3.5 rounded-xl border ${cardBorder} flex justify-between items-center shadow gap-2">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h5 class="font-bold text-white text-xs">${ex.title}</h5>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1">
+                                ${isDone && res
+                                    ? `<span class="text-emerald-400 font-bold">✅ Đã hoàn thành: ${res.score} điểm (${res.correctCount}/${res.totalQ} câu)</span>`
+                                    : '⏳ Chưa làm • 30 câu trắc nghiệm tính toán & lý thuyết'}
+                            </p>
+                        </div>
+                        <button onclick="startSelfExam('${ex.id}')" class="px-3.5 py-2 ${isDone ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-cyan-600 hover:bg-cyan-500'} text-white font-bold rounded-lg text-xs transition shadow shrink-0">
+                            ${isDone ? '🔍 Xem lại đề' : '✍️ Làm đề'}
+                        </button>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+            content.innerHTML = html;
+        } else {
+            submitBtn.classList.remove('hidden');
+            renderActiveSelfQuiz();
+        }
+    }
+    if (window.MathJax) MathJax.typesetPromise();
+}
+
+function startTeacherAssignedExam(id) {
+    activeTeacherExamId = id;
+    renderPracticeView();
+}
+
+function renderTeacherAssignedQuiz() {
+    let exam = teacherAssignedExams.find(e => e.id === activeTeacherExamId);
+    let choices = teacherExamChoices[activeTeacherExamId] || {};
+    let submitted = teacherExamSubmitted[activeTeacherExamId] || false;
+    let html = `<button onclick="activeTeacherExamId=null; renderPracticeView();" class="mb-3 px-3.5 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold shadow">⬅ Quay lại danh sách</button><div class="space-y-4">`;
+
+    exam.questions.forEach((q, idx) => {
+        let sel = choices[idx];
+        html += `
+            <div class="p-4 bg-slate-900 rounded-xl border border-slate-700 space-y-2">
+                <p class="font-bold text-white text-sm">${q.q}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+        `;
+        q.options.forEach((opt, optIdx) => {
+            let st = "bg-slate-800 text-slate-300 border-slate-700";
+            if (sel === optIdx) st = "bg-cyan-700 text-white border-cyan-400 font-bold";
+            if (submitted) {
+                if (optIdx === q.correct) st = "bg-emerald-700 text-white border-emerald-500 font-bold";
+                else if (sel === optIdx) st = "bg-rose-700 text-white border-rose-500 font-bold";
+            }
+            html += `<button onclick="selectTeacherChoice(${idx}, ${optIdx})" class="p-2.5 text-left text-xs rounded-xl border ${st} transition">${opt}</button>`;
+        });
+        html += `</div>`;
+        if (submitted) {
+            html += `<div class="mt-2 p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-emerald-400">💡 <b>Hướng dẫn giải chi tiết:</b> ${q.explain}</div>`;
+        }
+        html += `</div>`;
+    });
+    html += `</div>`;
+    document.getElementById('practiceContent').innerHTML = html;
+    if (window.MathJax) MathJax.typesetPromise();
+}
+
+function selectTeacherChoice(qIdx, optIdx) {
+    if (teacherExamSubmitted[activeTeacherExamId]) return;
+    if (!teacherExamChoices[activeTeacherExamId]) teacherExamChoices[activeTeacherExamId] = {};
+    teacherExamChoices[activeTeacherExamId][qIdx] = optIdx;
+    renderTeacherAssignedQuiz();
+}
+
+function selectSelfLevel(level) {
+    selectedSelfLevel = level;
+    renderPracticeView();
+}
+
+function startSelfExam(examId) {
+    activeSelfExamId = examId;
+    renderPracticeView();
+}
+
+// Tự động điền nhanh 30 câu trong đề đang mở để test nộp bài
+function quickFillCurrentSelfExam() {
+    let exam = selfPracticeExams[selectedSelfLevel].find(e => e.id === activeSelfExamId);
+    if (!exam || studentExamSubmitted[activeSelfExamId]) return;
+    if (!studentExamChoices[activeSelfExamId]) studentExamChoices[activeSelfExamId] = {};
+    exam.questions.forEach((q, idx) => {
+        // Chọn đúng ~80%, sai ~20% để học sinh thấy phân tích câu sai
+        studentExamChoices[activeSelfExamId][idx] = (idx % 5 === 0) ? ((q.correct + 1) % 4) : q.correct;
+    });
+    renderActiveSelfQuiz();
+}
+
+function renderActiveSelfQuiz() {
+    let exam = selfPracticeExams[selectedSelfLevel].find(e => e.id === activeSelfExamId);
+    let choices = studentExamChoices[activeSelfExamId] || {};
+    let submitted = studentExamSubmitted[activeSelfExamId] || false;
+    let answeredCount = Object.keys(choices).length;
+
+    let html = `
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <button onclick="activeSelfExamId=null; renderPracticeView();" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold shadow">
+                ⬅ Quay lại danh sách 20 đề
+            </button>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-cyan-300 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+                    Đã chọn: ${answeredCount} / ${exam.questions.length} câu
+                </span>
+                ${!submitted ? `
+                    <button onclick="quickFillCurrentSelfExam()" class="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-bold transition">
+                        ⚡ Điền nhanh 30 câu (Test)
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+        <div class="space-y-4">
+    `;
+
+    exam.questions.forEach((q, idx) => {
+        let sel = choices[idx];
+        let isAnswered = sel !== undefined;
+
+        html += `
+            <div class="p-4 bg-slate-900 rounded-xl border ${isAnswered ? 'border-slate-700' : 'border-amber-500/40'} space-y-2">
+                <div class="flex flex-wrap justify-between items-center gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-amber-400 bg-slate-800 px-2.5 py-1 rounded">${q.level}</span>
+                        <span class="text-[11px] font-semibold text-cyan-300 bg-cyan-950/80 px-2.5 py-1 rounded border border-cyan-800">📌 ${q.topicName || 'Dao động điều hòa'}</span>
+                    </div>
+                    ${!isAnswered && !submitted ? '<span class="text-[10px] text-amber-400 font-bold">Chưa trả lời</span>' : ''}
+                </div>
+                <p class="font-bold text-white text-sm">${q.q}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+        `;
+        q.options.forEach((opt, optIdx) => {
+            let st = "bg-slate-800 text-slate-300 border-slate-700";
+            if (sel === optIdx) st = "bg-cyan-700 text-white border-cyan-400 font-bold";
+            if (submitted) {
+                if (optIdx === q.correct) st = "bg-emerald-700 text-white border-emerald-500 font-bold";
+                else if (sel === optIdx && sel !== q.correct) st = "bg-rose-700 text-white border-rose-500 font-bold";
+            }
+            html += `<button onclick="selectSelfChoice(${idx}, ${optIdx})" class="p-2.5 text-left text-xs rounded-xl border ${st} transition">${opt}</button>`;
+        });
+        html += `</div>`;
+        if (submitted) {
+            const isWrong = sel !== q.correct;
+            const topicMeta = KNOWLEDGE_TOPICS[q.topicId];
+            html += `
+                <div class="mt-2 p-3 bg-slate-950 rounded-xl border ${isWrong ? 'border-rose-500/40' : 'border-slate-800'} text-xs space-y-1">
+                    <div class="${isWrong ? 'text-rose-400' : 'text-emerald-400'}">
+                        ${isWrong ? '❌ <b>Bạn chọn sai.</b>' : '✅ <b>Chính xác!</b>'} 💡 <b>Hướng dẫn giải:</b> ${q.explain}
+                    </div>
+                    ${isWrong && topicMeta ? `
+                        <div class="text-[11px] text-amber-300 pt-1 flex flex-wrap justify-between items-center gap-2 border-t border-slate-800 mt-1">
+                            <span>📌 <b>Kiến thức cần ôn:</b> ${topicMeta.name} — ${topicMeta.advice}</span>
+                            <button onclick="reviewWeakTopicInLab('${topicMeta.labExp}')" class="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 rounded text-[10px] font-bold">
+                                🧪 ${topicMeta.labLabel}
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        html += `</div>`;
+    });
+    html += `</div>`;
+    document.getElementById('practiceContent').innerHTML = html;
+    if (window.MathJax) MathJax.typesetPromise();
+}
+
+function selectSelfChoice(qIdx, optIdx) {
+    if (studentExamSubmitted[activeSelfExamId]) return;
+    if (!studentExamChoices[activeSelfExamId]) studentExamChoices[activeSelfExamId] = {};
+    studentExamChoices[activeSelfExamId][qIdx] = optIdx;
+    renderActiveSelfQuiz();
+}
+
+function submitPractice() {
+    if (practiceSubMode === 'teacher') {
+        let exam = teacherAssignedExams.find(e => e.id === activeTeacherExamId);
+        let choices = teacherExamChoices[activeTeacherExamId] || {};
+        let totalQ = exam.questions.length;
+        let unans = 0;
+        for (let i = 0; i < totalQ; i++) if (choices[i] === undefined) unans++;
+        if (unans > 0) {
+            alert(`⚠️ Bạn còn ${unans} câu chưa trả lời! Vui lòng hoàn thành tất cả các câu trước khi nộp.`);
+            return;
+        }
+
+        teacherExamSubmitted[activeTeacherExamId] = true;
+        let correct = 0;
+        exam.questions.forEach((q, i) => { if (choices[i] === q.correct) correct++; });
+        document.getElementById('practiceResultBox').classList.remove('hidden');
+        document.getElementById('practiceScoreText').innerText = `Chính xác: ${correct} / ${totalQ} câu (${Math.round((correct / totalQ) * 100)} điểm)`;
+        renderTeacherAssignedQuiz();
+    } else {
+        let exam = selfPracticeExams[selectedSelfLevel].find(e => e.id === activeSelfExamId);
+        let choices = studentExamChoices[activeSelfExamId] || {};
+        let totalQ = exam.questions.length;
+        let unans = 0;
+        let firstUnans = -1;
+
+        for (let i = 0; i < totalQ; i++) {
+            if (choices[i] === undefined) {
+                unans++;
+                if (firstUnans === -1) firstUnans = i;
+            }
+        }
+
+        if (unans > 0) {
+            alert(`⚠️ Bạn còn ${unans} câu chưa trả lời! Vui lòng hoàn thành đủ 30 câu trong đề trước khi bấm nộp bài.`);
+            const qEls = document.querySelectorAll('#practiceContent > div:last-child > div');
+            if (qEls[firstUnans]) {
+                qEls[firstUnans].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                qEls[firstUnans].classList.add('border-rose-500');
+                setTimeout(() => qEls[firstUnans].classList.remove('border-rose-500'), 2000);
+            }
+            return;
+        }
+
+        const res = recordExamSubmission(exam);
+        const wrongTopicNames = Object.keys(res.topicBreakdown)
+            .filter(tId => res.topicBreakdown[tId].wrong > 0)
+            .map(tId => `${KNOWLEDGE_TOPICS[tId].name} (sai ${res.topicBreakdown[tId].wrong} câu)`);
+
+        const resultBox = document.getElementById('practiceResultBox');
+        resultBox.classList.remove('hidden');
+        document.getElementById('practiceScoreText').innerHTML = `
+            <div>Chính xác: ${res.correctCount} / ${res.totalQ} câu (<span class="text-white">${res.score} điểm</span> hệ 10)</div>
+            ${wrongTopicNames.length > 0 ? `
+                <div class="text-xs text-rose-300 font-semibold mt-2">
+                    ⚠️ Các kiến thức cần ôn lại ở đề này: ${wrongTopicNames.join(' • ')}
+                </div>
+            ` : `
+                <div class="text-xs text-emerald-300 font-semibold mt-2">
+                    🌟 Xuất sắc! Bạn nắm vững toàn bộ các mảng kiến thức trong đề này.
+                </div>
+            `}
+        `;
+        renderActiveSelfQuiz();
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+    </script>
+
+    <!-- MODULE: TEACHER (js/teacher.js) -->
+    <script id="module-teacher">
+// ================= MODULE: QUẢN LÝ GIÁO VIÊN (TEACHER) =================
+
+function createNewClass() {
+    const className = document.getElementById('newClassNameInput').value.trim();
+    if (!className) {
+        alert("Vui lòng nhập tên/mã lớp mới!");
+        return;
+    }
+    if (teacherClasses.includes(className)) {
+        alert("Lớp này đã tồn tại!");
+        return;
+    }
+    teacherClasses.push(className);
+    document.getElementById('newClassNameInput').value = "";
+    renderTeacherManagementUI();
+    alert(`🎉 Đã tạo thành công lớp ${className}!`);
+}
+
+function renderTeacherManagementUI() {
+    let classListContainer = document.getElementById('classListContainer');
+    if (!classListContainer) return;
+    let html = "";
+    teacherClasses.forEach(cls => {
+        let activeStyle = activeSelectedClass === cls
+            ? "bg-amber-600 text-white font-bold border-amber-400"
+            : "bg-slate-800 text-cyan-300 border-slate-700 hover:bg-slate-700";
+        html += `<button onclick="filterProgressByClass('${cls}')" class="px-3 py-1.5 rounded-lg text-xs border ${activeStyle} transition shadow">📌 ${cls}</button>`;
+    });
+    classListContainer.innerHTML = html;
+    renderTeacherProgressTable();
+}
+
+function filterProgressByClass(cls) {
+    activeSelectedClass = cls;
+    document.getElementById('activeClassLabel').innerText = `Lớp ${cls}`;
+
+    let selectorBox = document.getElementById('classExamSelectorBox');
+    let examsHtml = `<p class="text-xs font-semibold text-slate-300">Danh sách đề của lớp ${cls}:</p>`;
+    teacherAssignedExams.forEach(ex => {
+        examsHtml += `<div class="p-2 bg-slate-900 rounded border border-slate-700 text-xs text-amber-300 flex justify-between items-center">
+            <span>📄 ${ex.title}</span>
+            <span class="text-[10px] text-cyan-400">Đã giao</span>
+        </div>`;
+    });
+    selectorBox.innerHTML = examsHtml;
+    renderTeacherManagementUI();
+}
+
+function resetClassFilter() {
+    activeSelectedClass = null;
+    document.getElementById('activeClassLabel').innerText = "Tất cả lớp";
+    document.getElementById('classExamSelectorBox').innerHTML = `<p class="text-xs text-slate-400 italic">💡 Vui lòng bấm vào mã lớp bên cột trái để xem danh sách đề và bảng tiến độ.</p>`;
+    renderTeacherManagementUI();
+}
+
+function renderTeacherProgressTable() {
+    let tbody = document.getElementById('teacherProgressTableBody');
+    if (!tbody) return;
+    let filtered = studentProgressData;
+    if (activeSelectedClass) {
+        filtered = studentProgressData.filter(d => d.classCode === activeSelectedClass);
+    }
+    let html = "";
+    if (filtered.length === 0) {
+        html = `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">Chưa có dữ liệu học sinh làm bài trong lớp này.</td></tr>`;
+    } else {
+        filtered.forEach(row => {
+            html += `
+                <tr class="hover:bg-slate-800/80 transition">
+                    <td class="p-3 border-b border-slate-800 font-semibold text-cyan-200">${row.name}</td>
+                    <td class="p-3 border-b border-slate-800 font-bold text-amber-400">${row.classCode}</td>
+                    <td class="p-3 border-b border-slate-800 text-slate-300">${row.examTitle}</td>
+                    <td class="p-3 border-b border-slate-800 text-emerald-400 font-bold">${row.score} điểm</td>
+                    <td class="p-3 border-b border-slate-800 text-slate-400">${row.time}</td>
+                </tr>
+            `;
+        });
+    }
+    tbody.innerHTML = html;
+}
+
+function teacherUploadExam() {
+    const title = document.getElementById('teacherExamTitle').value.trim();
+    const msg = document.getElementById('teacherUploadMsg');
+    if (!title) {
+        alert("Vui lòng nhập tên đề kiểm tra!");
+        return;
+    }
+    teacherAssignedExams.push({
+        id: 't_ex_' + Date.now(),
+        title: title,
+        date: '12/11/2026',
+        questions: [
+            { q: "Câu 1: Dao động điều hòa có li độ cực đại gọi là gì?", options: ["A. Tần số", "B. Biên độ", "C. Chu kỳ", "D. Pha ban đầu"], correct: 1, explain: "Li độ cực đại chính là Biên độ $A$." }
+        ]
+    });
+    msg.classList.remove('hidden');
+    msg.innerText = `🎉 Đã tải lên và xuất bản đề "${title}" thành công cho học sinh!`;
+    document.getElementById('teacherExamTitle').value = "";
+    setTimeout(() => msg.classList.add('hidden'), 5000);
+    renderTeacherManagementUI();
+}
+
+    </script>
+
+    <!-- MODULE: MAIN (js/main.js) -->
+    <script id="module-main">
+// ================= MODULE: KHỞI ĐỘNG ỨNG DỤNG (MAIN) =================
+
+window.addEventListener('DOMContentLoaded', () => {
+    switchMainTab('home');
+    startLabAnimation();
+});
+
+    </script>
 </body>
 </html>
